@@ -6,6 +6,7 @@
 
 #include "LogDlg.h"
 #include <GdiPlus.h>
+#include <vector>
 
 class CStaticImage : public CStatic
 {
@@ -67,6 +68,8 @@ public:
 	afx_msg LRESULT OnDrawImage(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
+	bool m_bHistRed;
+	std::vector<int> m_vHistRed;
 protected:
 	CListCtrl m_ctrlFileList;
 	CStaticImage m_ctrlImage;
@@ -88,4 +91,6 @@ public:
 	afx_msg void OnUpdateLogOpen(CCmdUI *pCmdUI);
 	afx_msg void OnLogClear();
 	afx_msg void OnUpdateLogClear(CCmdUI *pCmdUI);
+	afx_msg void OnUpdateHistogramRed(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramRed();
 };

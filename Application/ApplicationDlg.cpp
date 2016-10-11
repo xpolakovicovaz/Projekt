@@ -20,6 +20,27 @@
 #define MIN_SIZE 300
 #endif
 
+
+namespace
+{
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red)
+	{
+		red.clear();
+		red.assign(256, 0);
+		Gdiplus::Color *color ;
+		int k = 0;
+
+		for (int x = 0; x < pBitmap->GetWidth(); x++)
+		{
+			for (int y = 0; y < pBitmap->GetHeight(); y++)
+			{
+				pBitmap->GetPixel(x, y, color);
+				k = color->GetRed();
+				red[k]++;
+			}
+		}
+	}
+}
 void CStaticImage::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
 	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
@@ -52,10 +73,13 @@ protected:
 // Implementation
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnHistogramRed();
 };
 
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+	ON_COMMAND(ID_HISTOGRAM_RED, &CAboutDlg::OnHistogramRed)
 END_MESSAGE_MAP()
 
 
@@ -223,6 +247,7 @@ void CApplicationDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
+	ON_COMMAND(ID_HISTOGRAM_RED, &CAboutDlg::OnHistogramRed)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
@@ -242,6 +267,8 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_COMMAND(ID_LOG_CLEAR, OnLogClear)
 	ON_UPDATE_COMMAND_UI(ID_LOG_CLEAR, OnUpdateLogClear)
 	ON_WM_DESTROY()
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_RED, &CApplicationDlg::OnUpdateHistogramRed)
+	ON_COMMAND(ID_HISTOGRAM_RED, &CApplicationDlg::OnHistogramRed)
 END_MESSAGE_MAP()
 
 
@@ -585,13 +612,15 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
+
 		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
+		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed);
 	}
 
 	m_ctrlImage.Invalidate();
 
 	m_ctrlHistogram.Invalidate();
-
+	
 	*pResult = 0;
 }
 
@@ -617,4 +646,41 @@ void CApplicationDlg::OnLogClear()
 void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && m_ctrlLog.IsWindowVisible());
+}
+
+
+void CAboutDlg::OnHistogramRed()/*odstranit*/
+{
+	// TODO: Add your command handler code here
+}
+
+
+void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable(m_pBitmap != NULL);
+
+	// TODO: Add your command update UI handler code here
+}
+
+
+void CApplicationDlg::OnHistogramRed()
+{
+	m_bHistRed = !m_bHistRed;
+	Invalidate();
+
+	/*std::vector<int> m_vHistRed;
+	m_vHistRed.clear();
+	m_vHistRed.assign(256, 0);
+	Gdiplus::Color *color;
+	int k = 0;
+
+	for (int x = 0; x < m_pBitmap->GetWidth(); x++) 
+	{
+		for (int y = 0; y < m_pBitmap->GetHeight(); y++)
+		{
+			m_pBitmap->GetPixel(x, y, color);
+			k=color->GetRed();
+			m_vHistRed[k]++;
+		}	
+	}*/
 }
