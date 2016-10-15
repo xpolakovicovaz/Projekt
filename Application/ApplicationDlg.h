@@ -70,6 +70,9 @@ public:
 	afx_msg void OnDestroy();
 	bool m_bHistRed;
 	std::vector<int> m_vHistRed;
+	std::vector<int> m_vHistJas;
+	std::vector<int> m_vHistGreen;
+	std::vector<int> m_vHistBlue;
 protected:
 	CListCtrl m_ctrlFileList;
 	CStaticImage m_ctrlImage;

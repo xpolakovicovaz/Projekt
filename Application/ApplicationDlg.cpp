@@ -23,24 +23,33 @@
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red)
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
 		red.clear();
 		red.assign(256, 0);
-		Gdiplus::Color *color ;
-		int k = 0;
+		green.clear();
+		green.assign(256, 0);
+		blue.clear();
+		blue.assign(256, 0);
+		jas.clear();
+		jas.assign(256, 0);
+		Gdiplus::Color *color;
+		color = new Gdiplus::Color(255,2555,255);
 
 		for (int x = 0; x < pBitmap->GetWidth(); x++)
 		{
 			for (int y = 0; y < pBitmap->GetHeight(); y++)
 			{
 				pBitmap->GetPixel(x, y, color);
-				k = color->GetRed();
-				red[k]++;
+				red[color->GetRed()]++;
+				green[color->GetRed()]++;
+				blue[color->GetRed()]++;
+				jas[color->GetAlpha()]++;				
 			}
 		}
 	}
 }
+
 void CStaticImage::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
 	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
@@ -614,7 +623,7 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 
 		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed);
+		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed, m_vHistGreen, m_vHistBlue, m_vHistJas);
 	}
 
 	m_ctrlImage.Invalidate();
