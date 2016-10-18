@@ -11,6 +11,9 @@
 #include <vector>
 #include "Utils.h"
 #include <omp.h>
+#include <algorithm>
+
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -293,6 +296,17 @@ void CApplicationDlg::OnDestroy()
 	}
 }
 
+void drawrect(std::vector<int> vektor,CDC &DC,char f,double scX,double scY) 
+{
+	for (int i = 0; i < 255; i++)
+	{
+		CRect stlpik(i*scX, vektor[i] * scY, (i + 1)*scX + 1, 0);
+		DC.FillSolidRect(stlpik, RGB(255, 0, 0));
+
+	}
+
+}
+
 LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 {
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
@@ -304,6 +318,16 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
 
+
+	if (m_vHistRed.size() != 0) {
+		CRect rect;
+		GetClientRect(rect);
+		double scalY = double(rect.Height()) / double(*std::max_element(m_vHistRed.begin(), m_vHistRed.end()));
+		double scalX = rect.Width() / 255.0;
+		drawrect(m_vHistRed, *pDC, 'r', scalX, scalY);
+	}
+
+	
 	return S_OK;
 }
 
@@ -676,20 +700,4 @@ void CApplicationDlg::OnHistogramRed()
 {
 	m_bHistRed = !m_bHistRed;
 	Invalidate();
-
-	/*std::vector<int> m_vHistRed;
-	m_vHistRed.clear();
-	m_vHistRed.assign(256, 0);
-	Gdiplus::Color *color;
-	int k = 0;
-
-	for (int x = 0; x < m_pBitmap->GetWidth(); x++) 
-	{
-		for (int y = 0; y < m_pBitmap->GetHeight(); y++)
-		{
-			m_pBitmap->GetPixel(x, y, color);
-			k=color->GetRed();
-			m_vHistRed[k]++;
-		}	
-	}*/
 }
