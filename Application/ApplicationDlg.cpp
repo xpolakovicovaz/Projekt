@@ -11,7 +11,7 @@
 #include <vector>
 #include "Utils.h"
 #include <omp.h>
-#include <algorithm>
+//#include <algorithm>
 
 
 
@@ -37,7 +37,7 @@ namespace
 		jas.clear();
 		jas.assign(256, 0);
 		Gdiplus::Color *color;
-		color = new Gdiplus::Color(255,2555,255);
+		color = new Gdiplus::Color(255,255,255);
 
 		for (int x = 0; x < pBitmap->GetWidth(); x++)
 		{
@@ -45,11 +45,13 @@ namespace
 			{
 				pBitmap->GetPixel(x, y, color);
 				red[color->GetRed()]++;
-				green[color->GetRed()]++;
-				blue[color->GetRed()]++;
-				jas[color->GetAlpha()]++;				
+				green[color->GetGreen()]++;
+				blue[color->GetBlue()]++;
+				jas[(0.2126*color->GetRed() + 0.7152*color->GetGreen() + 0.0722*color->GetBlue())]++;
+				
 			}
 		}
+		delete(color);
 	}
 }
 
@@ -84,15 +86,10 @@ protected:
 
 // Implementation
 protected:
-	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnHistogramRed();
+
 };
 
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-	ON_COMMAND(ID_HISTOGRAM_RED, &CAboutDlg::OnHistogramRed)
-END_MESSAGE_MAP()
 
 
 namespace
@@ -259,7 +256,7 @@ void CApplicationDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
-	ON_COMMAND(ID_HISTOGRAM_RED, &CAboutDlg::OnHistogramRed)
+	ON_COMMAND(ID_HISTOGRAM_RED, OnHistogramRed)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
@@ -281,6 +278,12 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_WM_DESTROY()
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_RED, &CApplicationDlg::OnUpdateHistogramRed)
 	ON_COMMAND(ID_HISTOGRAM_RED, &CApplicationDlg::OnHistogramRed)
+	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
+	ON_COMMAND(ID_HISTOGRAM_BRIGHT, &CApplicationDlg::OnHistogramBright)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BRIGHT, &CApplicationDlg::OnUpdateHistogramBright)
+	ON_COMMAND(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnHistogramBlue)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnUpdateHistogramBlue)
 END_MESSAGE_MAP()
 
 
@@ -296,12 +299,13 @@ void CApplicationDlg::OnDestroy()
 	}
 }
 
-void drawrect(std::vector<int> vektor,CDC &DC,char f,double scX,double scY) 
+void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,COLORREF f,double scX,double scY)
 {
-	for (int i = 0; i < 255; i++)
+	
+	for (BYTE i = 0; i < 255; i++)
 	{
-		CRect stlpik(i*scX, vektor[i] * scY, (i + 1)*scX + 1, 0);
-		DC.FillSolidRect(stlpik, RGB(255, 0, 0));
+		CRect stlpik(floor(i*scX), floor(m_ptHistogram.y - max(0,log(vektor[i])) * scY),floor( (i + 1)*scX + 1), m_ptHistogram.y);
+		DC.FillSolidRect(stlpik, f);
 
 	}
 
@@ -317,14 +321,24 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
-
+	int max=1;
 
 	if (m_vHistRed.size() != 0) {
-		CRect rect;
-		GetClientRect(rect);
-		double scalY = double(rect.Height()) / double(*std::max_element(m_vHistRed.begin(), m_vHistRed.end()));
-		double scalX = rect.Width() / 255.0;
-		drawrect(m_vHistRed, *pDC, 'r', scalX, scalY);
+		CRect rect(&(lpDI->rcItem));
+		for (int i=0;i<256;i++)
+		{
+			if (m_vHistRed[i]> max)max = m_vHistRed[i];
+			if (m_vHistGreen[i]> max)max = m_vHistGreen[i];
+			if (m_vHistBlue[i]> max)max = m_vHistBlue[i];
+			if (m_vHistBright[i]> max)max = m_vHistBright[i];
+		}
+		
+		double scalY = double(rect.Height()) / double(log(max));
+		double scalX = rect.Width() / 256.0;
+		if (m_bHistRed)drawrect(m_vHistRed, *pDC, RGB(255,0,0), scalX, scalY);
+		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, RGB(0, 255, 0), scalX, scalY);
+		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, RGB(0, 0, 255), scalX, scalY);
+		if (m_bHistBright)drawrect(m_vHistBright, *pDC, RGB(127, 127, 127), scalX, scalY);
 	}
 
 	
@@ -588,6 +602,7 @@ void CApplicationDlg::OnFileOpen()
 	{
 		cs.ReleaseBuffer();
 	}
+	Invalidate();
 
 }
 
@@ -600,6 +615,17 @@ void CApplicationDlg::OnUpdateFileOpen(CCmdUI *pCmdUI)
 
 void CApplicationDlg::OnFileClose()
 {
+	m_bHistRed = false;
+	m_bHistGreen = false;
+	m_bHistBlue = false;
+	m_bHistBright = false;
+	if (m_pBitmap != nullptr)
+	{
+		delete m_pBitmap;
+		m_pBitmap = nullptr;
+	}	
+	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 	m_ctrlFileList.DeleteAllItems();
 }
 
@@ -638,6 +664,11 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 		m_pBitmap = nullptr;
 	}
 
+	m_bHistRed = false;
+	m_bHistGreen = false;
+	m_bHistBlue = false;
+	m_bHistBright = false;
+
 	CString csFileName;
 	POSITION pos = m_ctrlFileList.GetFirstSelectedItemPosition();
 	if (pos)
@@ -647,7 +678,7 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 
 		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed, m_vHistGreen, m_vHistBlue, m_vHistJas);
+		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed, m_vHistGreen, m_vHistBlue, m_vHistBright);
 	}
 
 	m_ctrlImage.Invalidate();
@@ -682,17 +713,10 @@ void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 }
 
 
-void CAboutDlg::OnHistogramRed()/*odstranit*/
-{
-	// TODO: Add your command handler code here
-}
-
-
 void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
-
-	// TODO: Add your command update UI handler code here
+	pCmdUI->SetCheck(!m_bHistRed);
 }
 
 
@@ -700,4 +724,48 @@ void CApplicationDlg::OnHistogramRed()
 {
 	m_bHistRed = !m_bHistRed;
 	Invalidate();
+}
+
+
+void CApplicationDlg::OnHistogramGreen()
+{
+	m_bHistGreen = !m_bHistGreen;
+	Invalidate();
+}
+
+void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable(m_pBitmap != NULL);
+	pCmdUI->SetCheck(!m_bHistGreen);
+}
+
+
+void CApplicationDlg::OnHistogramBright()
+{
+	m_bHistBright = !m_bHistBright;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramBright(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable(m_pBitmap != NULL);
+	pCmdUI->SetCheck(!m_bHistBright);
+
+}
+
+
+void CApplicationDlg::OnHistogramBlue()
+{
+	m_bHistBlue = !m_bHistBlue;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramBlue(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable(m_pBitmap != NULL);
+	pCmdUI->SetCheck(m_bHistBlue);
+
+
 }

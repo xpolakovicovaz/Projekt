@@ -57,6 +57,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
+	afx_msg void drawrect(std::vector<int> vektor, CDC &DC, COLORREF f, double scX, double scY);
 	afx_msg void OnFileOpen();
 	afx_msg void OnUpdateFileOpen(CCmdUI *pCmdUI);
 	afx_msg void OnFileClose();
@@ -69,8 +70,11 @@ public:
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
 	bool m_bHistRed;
+	bool m_bHistGreen;
+	bool m_bHistBlue;
+	bool m_bHistBright;
 	std::vector<int> m_vHistRed;
-	std::vector<int> m_vHistJas;
+	std::vector<int> m_vHistBright;
 	std::vector<int> m_vHistGreen;
 	std::vector<int> m_vHistBlue;
 protected:
@@ -96,4 +100,10 @@ public:
 	afx_msg void OnUpdateLogClear(CCmdUI *pCmdUI);
 	afx_msg void OnUpdateHistogramRed(CCmdUI *pCmdUI);
 	afx_msg void OnHistogramRed();
+	afx_msg void OnHistogramGreen();
+	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramBright();
+	afx_msg void OnUpdateHistogramBright(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramBlue();
+	afx_msg void OnUpdateHistogramBlue(CCmdUI *pCmdUI);
 };
