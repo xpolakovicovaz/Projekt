@@ -1,7 +1,6 @@
 
 // ApplicationDlg.cpp : implementation file
 //
-
 #include "stdafx.h"
 #include "Application.h"
 #include "ApplicationDlg.h"
@@ -37,7 +36,7 @@ namespace
 		jas.clear();
 		jas.assign(256, 0);
 		Gdiplus::Color *color;
-		color = new Gdiplus::Color(255,255,255);
+		color = new Gdiplus::Color(200,255,255,255);
 
 		for (int x = 0; x < pBitmap->GetWidth(); x++)
 		{
@@ -278,12 +277,12 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_WM_DESTROY()
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_RED, &CApplicationDlg::OnUpdateHistogramRed)
 	ON_COMMAND(ID_HISTOGRAM_RED, &CApplicationDlg::OnHistogramRed)
-	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
-	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
 	ON_COMMAND(ID_HISTOGRAM_BRIGHT, &CApplicationDlg::OnHistogramBright)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BRIGHT, &CApplicationDlg::OnUpdateHistogramBright)
 	ON_COMMAND(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnHistogramBlue)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnUpdateHistogramBlue)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
+	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
 END_MESSAGE_MAP()
 
 
@@ -299,14 +298,27 @@ void CApplicationDlg::OnDestroy()
 	}
 }
 
-void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,COLORREF f,double scX,double scY)
+/*void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,COLORREF f,double scX,double scY)
 {
-	
+	Gdiplus::Graphics g(DC);
+
 	for (BYTE i = 0; i < 255; i++)
 	{
 		CRect stlpik(floor(i*scX), floor(m_ptHistogram.y - max(0,log(vektor[i])) * scY),floor( (i + 1)*scX + 1), m_ptHistogram.y);
 		DC.FillSolidRect(stlpik, f);
 
+	}
+
+}*/
+
+void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,Gdiplus::Color f,double scX,double scY)
+{
+	double qwe = 0;
+	Gdiplus::Graphics g(DC);
+	for (BYTE i = 0; i < 255; i++)
+	{
+		g.FillRectangle(&Gdiplus::SolidBrush(f), Gdiplus::Rect(max(qwe,floor(i*scX)), floor(m_ptHistogram.y - max(0, log(vektor[i])) * scY), floor(scX + 1), m_ptHistogram.y));
+		qwe += floor(scX + 1);
 	}
 
 }
@@ -319,8 +331,6 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 
 	pDC->FillSolidRect(&(lpDI->rcItem), RGB(255, 255, 255));
 
-	CBrush brBlack(RGB(0, 0, 0));
-	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
 	int max=1;
 
 	if (m_vHistRed.size() != 0) {
@@ -335,13 +345,15 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 		
 		double scalY = double(rect.Height()) / double(log(max));
 		double scalX = rect.Width() / 256.0;
-		if (m_bHistRed)drawrect(m_vHistRed, *pDC, RGB(255,0,0), scalX, scalY);
-		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, RGB(0, 255, 0), scalX, scalY);
-		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, RGB(0, 0, 255), scalX, scalY);
-		if (m_bHistBright)drawrect(m_vHistBright, *pDC, RGB(127, 127, 127), scalX, scalY);
+		if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150,255,0,0), scalX, scalY);
+		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150,0, 255, 0), scalX, scalY);
+		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150,0, 0, 255), scalX, scalY);
+		if (m_bHistBright)drawrect(m_vHistBright, *pDC, Gdiplus::Color(150,0, 0, 0), scalX, scalY);
 	}
 
-	
+	CBrush brBlack(RGB(0, 0, 0));
+	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
+
 	return S_OK;
 }
 
@@ -584,6 +596,11 @@ void CApplicationDlg::OnFileOpen()
 			m_pBitmap = nullptr;
 		}
 
+		m_bHistRed = false;
+		m_bHistGreen = false;
+		m_bHistBlue = false;
+		m_bHistBright = false;
+
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 
@@ -603,7 +620,6 @@ void CApplicationDlg::OnFileOpen()
 		cs.ReleaseBuffer();
 	}
 	Invalidate();
-
 }
 
 
@@ -716,7 +732,7 @@ void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
-	pCmdUI->SetCheck(!m_bHistRed);
+	pCmdUI->SetCheck(m_bHistRed);
 }
 
 
@@ -725,20 +741,6 @@ void CApplicationDlg::OnHistogramRed()
 	m_bHistRed = !m_bHistRed;
 	Invalidate();
 }
-
-
-void CApplicationDlg::OnHistogramGreen()
-{
-	m_bHistGreen = !m_bHistGreen;
-	Invalidate();
-}
-
-void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
-{
-	pCmdUI->Enable(m_pBitmap != NULL);
-	pCmdUI->SetCheck(!m_bHistGreen);
-}
-
 
 void CApplicationDlg::OnHistogramBright()
 {
@@ -750,7 +752,7 @@ void CApplicationDlg::OnHistogramBright()
 void CApplicationDlg::OnUpdateHistogramBright(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
-	pCmdUI->SetCheck(!m_bHistBright);
+	pCmdUI->SetCheck(m_bHistBright);
 
 }
 
@@ -761,11 +763,21 @@ void CApplicationDlg::OnHistogramBlue()
 	Invalidate();
 }
 
-
 void CApplicationDlg::OnUpdateHistogramBlue(CCmdUI *pCmdUI)
 {
-	pCmdUI->Enable(m_pBitmap != NULL);
 	pCmdUI->SetCheck(m_bHistBlue);
+	pCmdUI->Enable(m_pBitmap != NULL);
+}
 
+void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_bHistGreen);
+	pCmdUI->Enable(m_pBitmap != NULL);
 
+}
+
+void CApplicationDlg::OnHistogramGreen()
+{
+	m_bHistGreen = !m_bHistGreen;
+	Invalidate();
 }
