@@ -30,4 +30,19 @@ namespace UnitTest
 			Assert::AreEqual(result.second[1], L"file2.name.ext", "filename 2");
 		}
 	};
+
+	TEST_CLASS(TestHistogram)
+	{
+		TEST_METHOD(TestHist)
+		{
+			std::vector<int> r, g, b, j;
+			r.assign(256, 0);
+			g.assign(256, 0);
+			b.assign(256, 0);
+			CalcHistogram(nullprt, 0, 0, 0, r, g, b, j);//vymeni+t pordie argumentov vo funkcii  - odstrani+t bitmap z argumentov
+			//dorobi+t jendnu testovaciu metodu, ktora nie+co otestuje, napr. cele +cervene pole
+		}
+	
+	
+	}
 }

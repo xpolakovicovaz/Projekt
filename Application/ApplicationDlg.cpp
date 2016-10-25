@@ -10,6 +10,7 @@
 #include <vector>
 #include "Utils.h"
 #include <omp.h>
+#include <cstdint>
 //#include <algorithm>
 
 
@@ -27,6 +28,7 @@ namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
+		int r, g, b;
 		red.clear();
 		red.assign(256, 0);
 		green.clear();
@@ -37,8 +39,30 @@ namespace
 		jas.assign(256, 0);
 		Gdiplus::Color *color;
 		color = new Gdiplus::Color(200,255,255,255);
+		Gdiplus::BitmapData Bdata;
+		
+		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
+		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
+		uint32_t *pLine = (uint32_t*)Bdata.Scan0;
 
-		for (int x = 0; x < pBitmap->GetWidth(); x++)
+		Utils::CalcHistogram(pLine, (uint32_t*)Bdata.Scan0, Bdata.Stride, *&pBitmap, red, green, blue, jas);
+
+		/*for (int y= 0; y < pBitmap->GetHeight(); y++)
+		{
+			for (int x = 0; x < pBitmap->GetWidth(); x++)
+			{
+				r = ((*pLine) >> 16) & 0xff;
+				g = ((*pLine) >> 8) & 0xff;
+				b = (*pLine) & 0xff;
+				red[r]++;
+				green[g]++;
+				blue[b]++;
+				jas[int(0.2126*r + 0.7152*g + 0.0722*b)]++;
+				pLine++;
+			}
+			pLine = (uint32_t*)((uint8_t*)Bdata.Scan0 + Bdata.Stride*(y+1));
+		}*/
+		/*for (int x = 0; x < pBitmap->GetWidth(); x++)
 		{
 			for (int y = 0; y < pBitmap->GetHeight(); y++)
 			{
@@ -49,8 +73,9 @@ namespace
 				jas[(0.2126*color->GetRed() + 0.7152*color->GetGreen() + 0.0722*color->GetBlue())]++;
 				
 			}
-		}
+		}*/
 		delete(color);
+		pBitmap->UnlockBits(&Bdata);
 	}
 }
 
