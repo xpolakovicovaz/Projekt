@@ -36,12 +36,11 @@ namespace UnitTest
 		TEST_METHOD(TestHist)
 		{
 			int d = 256;
-			std::vector<int> r, g, b, j;//, t;
+			std::vector<int> r, g, b, j;
 			r.assign(256, 0);
 			g.assign(256, 0);
 			b.assign(256, 0);
 			j.assign(256, 0);
-			//t.assign(256, 256);
 			uint32_t pBitmap[256][256];
 			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
 			for (int x = 0; x < d; x++) {
@@ -55,18 +54,6 @@ namespace UnitTest
 			Assert::AreEqual(g[88], d*d, L"zeleny");
 			Assert::AreEqual(b[0], d*d, L"modry");
 		}
-	/*		for (int x = 0; x < 256; x++) {
-				for (int y = 0; y < 256; y++){
-					pBitmap[x][y] = x * 256 * 256 + x * 256 + x * 1;
-				}
-			}
-			CalcHistogram(pBitmap, d, d, d, r, g, b, j);
-			for (int i = 0; i < d; i++) {
-				Assert::AreEqual(r[i], t[i], L"jednotkovy red");
-			}
-
-		}
-	*/
 	
 	};
 }
