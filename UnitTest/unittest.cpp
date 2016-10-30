@@ -35,14 +35,38 @@ namespace UnitTest
 	{
 		TEST_METHOD(TestHist)
 		{
-			std::vector<int> r, g, b, j;
+			int d = 256;
+			std::vector<int> r, g, b, j;//, t;
 			r.assign(256, 0);
 			g.assign(256, 0);
 			b.assign(256, 0);
-			CalcHistogram(nullprt, 0, 0, 0, r, g, b, j);//vymeni+t pordie argumentov vo funkcii  - odstrani+t bitmap z argumentov
-			//dorobi+t jendnu testovaciu metodu, ktora nie+co otestuje, napr. cele +cervene pole
+			j.assign(256, 0);
+			//t.assign(256, 256);
+			uint32_t pBitmap[256][256];
+			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
+			for (int x = 0; x < d; x++) {
+				for (int y = 0; y < d; y++) {
+					pBitmap[x][y] = 16734208;// 0xff8800;
+				}
+			}
+
+			CalcHistogram(pBitmap, d, d, d, r, g, b, j);
+			Assert::AreEqual(r[255], d*d, L"cerveny");
+			Assert::AreEqual(g[88], d*d, L"zeleny");
+			Assert::AreEqual(b[0], d*d, L"modry");
 		}
+	/*		for (int x = 0; x < 256; x++) {
+				for (int y = 0; y < 256; y++){
+					pBitmap[x][y] = x * 256 * 256 + x * 256 + x * 1;
+				}
+			}
+			CalcHistogram(pBitmap, d, d, d, r, g, b, j);
+			for (int i = 0; i < d; i++) {
+				Assert::AreEqual(r[i], t[i], L"jednotkovy red");
+			}
+
+		}
+	*/
 	
-	
-	}
+	};
 }

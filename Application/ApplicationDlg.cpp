@@ -43,37 +43,9 @@ namespace
 		
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
-		uint32_t *pLine = (uint32_t*)Bdata.Scan0;
 
-		Utils::CalcHistogram(pLine, (uint32_t*)Bdata.Scan0, Bdata.Stride, *&pBitmap, red, green, blue, jas);
+		Utils::CalcHistogram(Bdata.Scan0, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), red, green, blue, jas);
 
-		/*for (int y= 0; y < pBitmap->GetHeight(); y++)
-		{
-			for (int x = 0; x < pBitmap->GetWidth(); x++)
-			{
-				r = ((*pLine) >> 16) & 0xff;
-				g = ((*pLine) >> 8) & 0xff;
-				b = (*pLine) & 0xff;
-				red[r]++;
-				green[g]++;
-				blue[b]++;
-				jas[int(0.2126*r + 0.7152*g + 0.0722*b)]++;
-				pLine++;
-			}
-			pLine = (uint32_t*)((uint8_t*)Bdata.Scan0 + Bdata.Stride*(y+1));
-		}*/
-		/*for (int x = 0; x < pBitmap->GetWidth(); x++)
-		{
-			for (int y = 0; y < pBitmap->GetHeight(); y++)
-			{
-				pBitmap->GetPixel(x, y, color);
-				red[color->GetRed()]++;
-				green[color->GetGreen()]++;
-				blue[color->GetBlue()]++;
-				jas[(0.2126*color->GetRed() + 0.7152*color->GetGreen() + 0.0722*color->GetBlue())]++;
-				
-			}
-		}*/
 		delete(color);
 		pBitmap->UnlockBits(&Bdata);
 	}
@@ -340,11 +312,15 @@ void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,Gdiplus::Color f,
 {
 	double qwe = 0;
 	Gdiplus::Graphics g(DC);
-	for (BYTE i = 0; i < 255; i++)
+	Gdiplus::PointF* bod = new Gdiplus::PointF[258];
+	for (int i = 0; i < 256; i++)
 	{
-		g.FillRectangle(&Gdiplus::SolidBrush(f), Gdiplus::Rect(max(qwe,floor(i*scX)), floor(m_ptHistogram.y - max(0, log(vektor[i])) * scY), floor(scX + 1), m_ptHistogram.y));
-		qwe += floor(scX + 1);
+		bod[i]=Gdiplus::PointF((i+1)*scX, m_ptHistogram.y - max(0, log(vektor[i])) * scY);
 	}
+	bod[256] = Gdiplus::PointF(m_ptHistogram.x, m_ptHistogram.y);
+	bod[257] = Gdiplus::PointF(0, m_ptHistogram.y);
+
+	g.FillPolygon(&Gdiplus::SolidBrush(f), bod, 258);
 
 }
 
