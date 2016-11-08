@@ -11,6 +11,8 @@
 #include "Utils.h"
 #include <omp.h>
 #include <cstdint>
+#include <thread>
+#include <atomic>
 //#include <algorithm>
 
 
@@ -28,7 +30,9 @@ namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
-		int r, g, b;
+		int r = 0;
+		int g = 0;
+		int b=0;
 		red.clear();
 		red.assign(256, 0);
 		green.clear();
@@ -266,6 +270,7 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_WM_SIZING()
 	ON_MESSAGE(WM_DRAW_IMAGE, OnDrawImage)
 	ON_MESSAGE(WM_DRAW_HISTOGRAM, OnDrawHistogram)
+	ON_MESSAGE(WM_SET_BITMAP, OnSetBitmap)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_FILE_LIST, OnLvnItemchangedFileList)
 	ON_COMMAND(ID_LOG_OPEN, OnLogOpen)
 	ON_UPDATE_COMMAND_UI(ID_LOG_OPEN, OnUpdateLogOpen)
@@ -280,6 +285,7 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnUpdateHistogramBlue)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
 	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
+	
 END_MESSAGE_MAP()
 
 
@@ -693,14 +699,39 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
-
+		std::atomic<std::thread::id> tredid;
 		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-		LoadAndCalc(csFileName, m_pBitmap, m_vHistRed, m_vHistGreen, m_vHistBlue, m_vHistBright);
+		std::thread tred([this, csFileName,tredid]() {
+			std::vector<int> HistRed;
+			std::vector<int> HistBright;
+			std::vector<int> HistGreen;
+			std::vector<int> HistBlue;
+			Gdiplus::Bitmap *pBitmap = nullptr;
+			LoadAndCalc(csFileName, pBitmap, HistRed,HistGreen, HistBlue,HistBright); 
+			if (std::this_thread::get_id() == tredid) {
+				std::tuple < Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>> tuple = std::make_tuple(pBitmap, HistRed, HistGreen, HistBlue, HistBright);
+				SendMessage(WM_SET_BITMAP, (WPARAM)&tuple);
+			/*	m_pBitmap = pBitmap;
+				m_vHistRed =std::move( HistRed);
+				m_vHistGreen = std::move( HistGreen);
+				m_vHistBlue = std::move (HistBlue);
+				m_vHistBright = std::move( HistBright);*/
+			}
+			else 
+			{ 
+				delete pBitmap;
+			}
+
+			m_ctrlImage.Invalidate();
+			m_ctrlHistogram.Invalidate(); 
+		});
+		tredid= tred.get_id();
+		tred.detach();
 	}
 
-	m_ctrlImage.Invalidate();
+//	m_ctrlImage.Invalidate();
 
-	m_ctrlHistogram.Invalidate();
+//	m_ctrlHistogram.Invalidate();
 	
 	*pResult = 0;
 }
@@ -781,4 +812,12 @@ void CApplicationDlg::OnHistogramGreen()
 {
 	m_bHistGreen = !m_bHistGreen;
 	Invalidate();
+}
+
+void CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
+{
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>>x(wParam));
+	std::get<0>(*ptuple);
+	/*Gdiplus::Bitmap pobj = (Gdiplus::Bitmap*)wParam;
+	pobj->pBitmap;*/
 }

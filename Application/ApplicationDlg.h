@@ -107,4 +107,5 @@ public:
 	afx_msg void OnUpdateHistogramBlue(CCmdUI *pCmdUI);
 	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
 	afx_msg void OnHistogramGreen();
+	afx_msg void OnSetBitmap(WPARAM wParam,LPARAM lParam);
 };
