@@ -13,9 +13,7 @@
 #include <cstdint>
 #include <thread>
 #include <atomic>
-//#include <algorithm>
-
-
+#include <tuple>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -28,7 +26,7 @@
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
 		int r = 0;
 		int g = 0;
@@ -44,7 +42,8 @@ namespace
 		Gdiplus::Color *color;
 		color = new Gdiplus::Color(200,255,255,255);
 		Gdiplus::BitmapData Bdata;
-		
+		pBitmap = Gdiplus::Bitmap::FromFile(fileName);
+
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
 
@@ -318,13 +317,14 @@ void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,Gdiplus::Color f,
 {
 	double qwe = 0;
 	Gdiplus::Graphics g(DC);
-	Gdiplus::PointF* bod = new Gdiplus::PointF[258];
+	Gdiplus::PointF bod[259];
+	bod[0] = Gdiplus::PointF(0, m_ptHistogram.y - max(0, log(vektor[0])) * scY);
 	for (int i = 0; i < 256; i++)
 	{
-		bod[i]=Gdiplus::PointF((i+1)*scX, m_ptHistogram.y - max(0, log(vektor[i])) * scY);
+		bod[i+1]=Gdiplus::PointF((i+1)*scX, m_ptHistogram.y - max(0, log(vektor[i])) * scY);
 	}
-	bod[256] = Gdiplus::PointF(m_ptHistogram.x, m_ptHistogram.y);
-	bod[257] = Gdiplus::PointF(0, m_ptHistogram.y);
+	bod[257] = Gdiplus::PointF(257*scX, m_ptHistogram.y);
+	bod[258] = Gdiplus::PointF(0, m_ptHistogram.y);
 
 	g.FillPolygon(&Gdiplus::SolidBrush(f), bod, 258);
 
@@ -351,7 +351,7 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 		}
 		
 		double scalY = double(rect.Height()) / double(log(max));
-		double scalX = rect.Width() / 256.0;
+		double scalX = rect.Width() / 257.0;
 		if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150,255,0,0), scalX, scalY);
 		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150,0, 255, 0), scalX, scalY);
 		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150,0, 0, 255), scalX, scalY);
@@ -652,6 +652,29 @@ void CApplicationDlg::OnFileClose()
 	m_ctrlFileList.DeleteAllItems();
 }
 
+void CApplicationDlg::funkcia(CString csFileName)
+{
+		std::vector<int> HistRed;
+		std::vector<int> HistBright;
+		std::vector<int> HistGreen;
+		std::vector<int> HistBlue;
+		HistRed.clear();
+		HistGreen.clear();
+		HistBlue.clear();
+		HistBright.clear();
+		Gdiplus::Bitmap *pBitmap = nullptr;
+		pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
+		LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright);
+		if (std::this_thread::get_id() == m_thread_id) {
+			std::tuple <Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(pBitmap, HistRed, HistGreen, HistBlue, HistBright);
+			SendMessage(WM_SET_BITMAP, (WPARAM)&ntuple);
+		}
+		else
+		{
+			delete pBitmap;
+		}
+}
+
 
 void CApplicationDlg::OnUpdateFileClose(CCmdUI *pCmdUI)
 {
@@ -692,6 +715,8 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	m_bHistBlue = false;
 	m_bHistBright = false;
 
+	m_thread_id = std::this_thread::get_id();
+
 	CString csFileName;
 	POSITION pos = m_ctrlFileList.GetFirstSelectedItemPosition();
 	if (pos)
@@ -699,34 +724,10 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
-		std::atomic<std::thread::id> tredid;
-		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-		std::thread tred([this, csFileName,tredid]() {
-			std::vector<int> HistRed;
-			std::vector<int> HistBright;
-			std::vector<int> HistGreen;
-			std::vector<int> HistBlue;
-			Gdiplus::Bitmap *pBitmap = nullptr;
-			LoadAndCalc(csFileName, pBitmap, HistRed,HistGreen, HistBlue,HistBright); 
-			if (std::this_thread::get_id() == tredid) {
-				std::tuple < Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>> tuple = std::make_tuple(pBitmap, HistRed, HistGreen, HistBlue, HistBright);
-				SendMessage(WM_SET_BITMAP, (WPARAM)&tuple);
-			/*	m_pBitmap = pBitmap;
-				m_vHistRed =std::move( HistRed);
-				m_vHistGreen = std::move( HistGreen);
-				m_vHistBlue = std::move (HistBlue);
-				m_vHistBright = std::move( HistBright);*/
-			}
-			else 
-			{ 
-				delete pBitmap;
-			}
-
-			m_ctrlImage.Invalidate();
-			m_ctrlHistogram.Invalidate(); 
-		});
-		tredid= tred.get_id();
+		std::thread tred(&CApplicationDlg::funkcia, this, csFileName);	
+		m_thread_id = tred.get_id();
 		tred.detach();
+		
 	}
 
 //	m_ctrlImage.Invalidate();
@@ -814,10 +815,18 @@ void CApplicationDlg::OnHistogramGreen()
 	Invalidate();
 }
 
-void CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
+LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 {
-	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>>x(wParam));
-	std::get<0>(*ptuple);
-	/*Gdiplus::Bitmap pobj = (Gdiplus::Bitmap*)wParam;
-	pobj->pBitmap;*/
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&>*)(wParam);
+	
+	m_pBitmap = std::get<0>(*ptuple);
+	m_vHistRed = std::move(std::get<1>(*ptuple));
+	m_vHistGreen = std::move(std::get<2>(*ptuple));
+	m_vHistBlue = std::move(std::get<3>(*ptuple));
+	m_vHistBright = std::move(std::get<4>(*ptuple)); 
+
+	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
+
+	return TRUE;
 }

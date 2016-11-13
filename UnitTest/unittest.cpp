@@ -53,6 +53,14 @@ namespace UnitTest
 			Assert::AreEqual(r[255], d*d, L"cerveny");
 			Assert::AreEqual(g[88], d*d, L"zeleny");
 			Assert::AreEqual(b[0], d*d, L"modry");
+			Assert::AreEqual(j[(int)(0.2126 * 255 + 0.7152 * 88 + 0.0722 * 0)], d*d, L"jas");
+			for (int i = 0; i < 256; i++) 
+			{
+			if (i != 255) Assert::AreEqual(r[i], 0, L"cerveny0");
+			if (i != 88) Assert::AreEqual(g[i], 0, L"zeleny0");
+			if (i != 0) Assert::AreEqual(b[i], 0, L"modry0");
+			if (i!=(int)(0.2126*255 + 0.7152*88 + 0.0722*0))Assert::AreEqual(j[i], 0, L"jas0");
+			}
 		}
 	
 	};

@@ -7,6 +7,8 @@
 #include "LogDlg.h"
 #include <GdiPlus.h>
 #include <vector>
+#include <atomic>
+#include <thread>
 
 class CStaticImage : public CStatic
 {
@@ -28,7 +30,9 @@ public:
 	enum
 	{
 		WM_DRAW_IMAGE = (WM_USER + 1),
-		WM_DRAW_HISTOGRAM
+		WM_DRAW_HISTOGRAM,
+		WM_SET_BITMAP
+				
 	};
 
 	CApplicationDlg(CWnd* pParent = NULL);	// standard constructor
@@ -63,6 +67,7 @@ protected:
 	std::vector<int> m_vHistBright;
 	std::vector<int> m_vHistGreen;
 	std::vector<int> m_vHistBlue;
+	std::atomic<std::thread::id> m_thread_id;
 
 public:
 	afx_msg void drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color f, double scX, double scY);
@@ -76,7 +81,9 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg LRESULT OnDrawImage(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
+	afx_msg void funkcia(CString csFileName);
 
 protected:
 	CListCtrl m_ctrlFileList;
@@ -107,5 +114,4 @@ public:
 	afx_msg void OnUpdateHistogramBlue(CCmdUI *pCmdUI);
 	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
 	afx_msg void OnHistogramGreen();
-	afx_msg void OnSetBitmap(WPARAM wParam,LPARAM lParam);
 };
