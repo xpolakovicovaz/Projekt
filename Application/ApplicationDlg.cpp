@@ -1,5 +1,10 @@
-
+﻿//v load and calc nie je priradena dlzka vektoru vektorov
+//urobit polozky v menu
+//v menu: auto =max mozny pocet tredov
+//kontrolovať tred_id v setbitmap
+//dorobi+t preru3enie vypoctu, ked sa prejde na novy obrazok -> kontrolovat po kazdom riadku 
 // ApplicationDlg.cpp : implementation file
+//premenovat funkcia na single thread
 //
 #include "stdafx.h"
 #include "Application.h"
@@ -28,6 +33,8 @@ namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
+		int pt = 2;//dat prec
+
 		int r = 0;
 		int g = 0;
 		int b=0;
@@ -39,16 +46,46 @@ namespace
 		blue.assign(256, 0);
 		jas.clear();
 		jas.assign(256, 0);
+
 		Gdiplus::Color *color;
 		color = new Gdiplus::Color(200,255,255,255);
 		Gdiplus::BitmapData Bdata;
 		pBitmap = Gdiplus::Bitmap::FromFile(fileName);
+		int dlzka = pBitmap->GetHeight() / pt;
 
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
+		
+		std::vector<std::vector<int>> HistRed1;
+		std::vector<std::vector<int>> HistBright1;
+		std::vector<std::vector<int>> HistGreen1;
+		std::vector<std::vector<int>> HistBlue1;
 
-		Utils::CalcHistogram(Bdata.Scan0, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), red, green, blue, jas);
-
+		for (int i = 1; i < pt; i++) {
+		/*	std::vector<int> HistRed1;
+			std::vector<int> HistBright1;
+			std::vector<int> HistGreen1;
+			std::vector<int> HistBlue1;
+			*/
+			HistRed1[i].assign(256, 0);
+			HistGreen1[i].assign(256, 0);
+			HistBlue1[i].assign(256, 0);
+			HistBright1[i].assign(256, 0);
+			std::thread tred2(&Utils::CalcHistogram, Bdata.Scan0, i*dlzka,(i+1)*dlzka, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), std::ref(HistRed1[i]), std::ref(HistGreen1[i]), std::ref(HistBlue1[i]), std::ref(HistBright1[i]));
+		}
+		Utils::CalcHistogram(Bdata.Scan0, pt*dlzka, pBitmap->GetHeight(), Bdata.Stride,pBitmap->GetWidth(),pBitmap->GetHeight(), red, green, blue, jas);
+			
+//		tred2.join();
+		//Utils::CalcHistogram(Bdata.Scan0, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), red, green, blue, jas);
+		for(int j=0;j<pt;j++)
+		for (int i = 0; i <= 255; i++) 
+		{
+			red[i] += HistRed1[j][i];
+			green[i] += HistGreen1[j][i];
+			blue[i] += HistBlue1[j][i];
+			jas[i] += HistBright1[j][i];
+		}
+		
 		delete(color);
 		pBitmap->UnlockBits(&Bdata);
 	}
@@ -285,6 +322,10 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
 	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
 	
+	ON_COMMAND(ID_THREADS_1, &CApplicationDlg::OnThreads1)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_1, &CApplicationDlg::OnUpdateThreads1)
+	ON_COMMAND(ID_THREADS_2, &CApplicationDlg::OnThreads2)
+	ON_COMMAND(ID_THREADS_3, &CApplicationDlg::OnThreads3)
 END_MESSAGE_MAP()
 
 
@@ -527,6 +568,8 @@ BOOL CApplicationDlg::OnInitDialog()
 
 	m_ctrlLog.Create(IDD_LOG_DIALOG, this);
 	m_ctrlLog.ShowWindow(SW_HIDE);
+
+	pt = 2;
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -829,4 +872,26 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 	m_ctrlHistogram.Invalidate();
 
 	return TRUE;
+}
+
+
+void CApplicationDlg::OnThreads1()
+{
+	pt = 1;
+}
+
+void CApplicationDlg::OnUpdateThreads1(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck();
+		// TODO: Add your command update UI handler code here
+}
+
+void CApplicationDlg::OnThreads2()
+{
+	pt = 2;
+}
+
+void CApplicationDlg::OnThreads3()
+{
+	pt = 4;
 }

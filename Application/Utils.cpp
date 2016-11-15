@@ -41,11 +41,11 @@ namespace Utils
 
 	}
 
-	void CalcHistogram(void* scan0, BYTE stride, int s, int v, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
+	void CalcHistogram(void* scan0,int zaciatok, int koniec, BYTE stride, int s, int v, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
 	{
 		int r, g, b;
-		uint32_t *pLine = (uint32_t*)scan0;
-		for (int y = 0; y < v; y++)
+		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
+		for (int y = zaciatok; y < koniec; y++)
 		{
 			for (int x = 0; x < s; x++)
 			{

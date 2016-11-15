@@ -68,6 +68,7 @@ protected:
 	std::vector<int> m_vHistGreen;
 	std::vector<int> m_vHistBlue;
 	std::atomic<std::thread::id> m_thread_id;
+	int pt;//pocet threadov
 
 public:
 	afx_msg void drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color f, double scX, double scY);
@@ -114,4 +115,8 @@ public:
 	afx_msg void OnUpdateHistogramBlue(CCmdUI *pCmdUI);
 	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
 	afx_msg void OnHistogramGreen();
+	afx_msg void OnThreads1();
+	afx_msg void OnUpdateThreads1(CCmdUI *pCmdUI);
+	afx_msg void OnThreads2();
+	afx_msg void OnThreads3();
 };
