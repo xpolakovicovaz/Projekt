@@ -31,23 +31,15 @@ LIBRARY_API std::pair< CString, std::vector<CString> > ParseFiles(LPCTSTR lpstrF
 	return Utils::ParseFiles(lpstrFile);
 }
 
-LIBRARY_API void CalcHistogram(void* scan0, BYTE stride, int s, int v, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
+LIBRARY_API void CalcHistogram(void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int>& red, std::vector<int>& green, std::vector<int>& blue, std::vector<int>& jas)
 {
-	int r, g, b;
-	uint32_t *pLine = (uint32_t*)scan0;
-	for (int y = 0; y < v; y++)
-	{
-		for (int x = 0; x <s; x++)
-		{
-			r = ((*pLine) >> 16) & 0xff;
-			g = ((*pLine) >> 8) & 0xff;
-			b = (*pLine) & 0xff;
-			red[r]++;
-			green[g]++;
-			blue[b]++;
-			jas[(int)(0.2126*r + 0.7152*g + 0.0722*b)]++; 
-			pLine++;
-		}
-		pLine = (uint32_t*)((uint8_t*)scan0 + stride*(y + 1));
-	}
+	return Utils::CalcHistogram(scan0, zaciatok, koniec, stride, s, red, green, blue, jas);
 }
+
+LIBRARY_API void multi_thread(int pt, int dlzka, void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>>& red, std::vector<std::vector<int>>& green, std::vector<std::vector<int>>& blue, std::vector<std::vector<int>>& jas)
+{
+	return Utils::multi_thread(pt, dlzka, scan0, zaciatok, koniec, stride, s, std::ref(red), std::ref(green), std::ref(blue), std::ref(jas));
+}
+
+
+

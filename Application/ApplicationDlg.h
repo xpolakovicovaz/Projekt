@@ -84,7 +84,8 @@ public:
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
-	afx_msg void funkcia(CString csFileName);
+	afx_msg void single_tred(CString csFileName);
+	afx_msg int dajpt();
 
 protected:
 	CListCtrl m_ctrlFileList;
@@ -101,6 +102,7 @@ protected:
 
 	Gdiplus::Bitmap * m_pBitmap;
 	DWORD m_nMaxThreads;
+
 public:
 	afx_msg void OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnLogOpen();
@@ -118,5 +120,15 @@ public:
 	afx_msg void OnThreads1();
 	afx_msg void OnUpdateThreads1(CCmdUI *pCmdUI);
 	afx_msg void OnThreads2();
-	afx_msg void OnThreads3();
+	afx_msg void OnUpdateThreads2(CCmdUI *pCmdUI);
+	afx_msg void OnThreads4();
+	afx_msg void OnUpdateThreads4(CCmdUI *pCmdUI);
+	afx_msg void OnThreads8();
+	afx_msg void OnUpdateThreads8(CCmdUI *pCmdUI);
+	afx_msg void OnThreads12();
+	afx_msg void OnUpdateThreads12(CCmdUI *pCmdUI);
+	afx_msg void OnThreads16();
+	afx_msg void OnUpdateThreads16(CCmdUI *pCmdUI);
+	afx_msg void OnThreadsAuto();
+	afx_msg void OnUpdateThreadsAuto(CCmdUI *pCmdUI);
 };

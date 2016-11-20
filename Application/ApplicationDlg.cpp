@@ -1,11 +1,10 @@
-﻿//v load and calc nie je priradena dlzka vektoru vektorov
-//urobit polozky v menu
-//v menu: auto =max mozny pocet tredov
-//kontrolovať tred_id v setbitmap
-//dorobi+t preru3enie vypoctu, ked sa prejde na novy obrazok -> kontrolovat po kazdom riadku 
+﻿//odstranit funkciu dajpt()
+//stale sa updateuju polozky v menu, aj ked na ne neklikam. preco?
+//dorobit testy
+
 // ApplicationDlg.cpp : implementation file
-//premenovat funkcia na single thread
 //
+
 #include "stdafx.h"
 #include "Application.h"
 #include "ApplicationDlg.h"
@@ -31,13 +30,27 @@
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
+	void multi_thread(int pt, int dlzka, void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas)
 	{
-		int pt = 2;//dat prec
+		std::vector<std::thread> tred(pt);
+		for (int i = 0; i < pt-1; i++)
+		{
+			tred[i] = std::thread(&Utils::CalcHistogram, scan0, i*dlzka, (i + 1)*dlzka, stride, s, std::ref(red[i]),std::ref(green[i]), std::ref(blue[i]), std::ref(jas[i]));
+		}
+		Utils::CalcHistogram(scan0, (pt-1)*dlzka,koniec, stride, s, std::ref(red[pt-1]), std::ref(green[pt-1]), std::ref(blue[pt-1]), std::ref(jas[pt-1]));
 
+		for (int i = 0; i < pt-1; i++)
+		{
+			tred[i].join();
+		}
+		
+	}
+
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas,int pt, std::thread::id m_thread_id)
+	{
 		int r = 0;
 		int g = 0;
-		int b=0;
+		int b = 0;
 		red.clear();
 		red.assign(256, 0);
 		green.clear();
@@ -48,35 +61,21 @@ namespace
 		jas.assign(256, 0);
 
 		Gdiplus::Color *color;
-		color = new Gdiplus::Color(200,255,255,255);
+		color = new Gdiplus::Color(200, 255, 255, 255);
 		Gdiplus::BitmapData Bdata;
 		pBitmap = Gdiplus::Bitmap::FromFile(fileName);
 		int dlzka = pBitmap->GetHeight() / pt;
 
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
-		
-		std::vector<std::vector<int>> HistRed1;
-		std::vector<std::vector<int>> HistBright1;
-		std::vector<std::vector<int>> HistGreen1;
-		std::vector<std::vector<int>> HistBlue1;
 
-		for (int i = 1; i < pt; i++) {
-		/*	std::vector<int> HistRed1;
-			std::vector<int> HistBright1;
-			std::vector<int> HistGreen1;
-			std::vector<int> HistBlue1;
-			*/
-			HistRed1[i].assign(256, 0);
-			HistGreen1[i].assign(256, 0);
-			HistBlue1[i].assign(256, 0);
-			HistBright1[i].assign(256, 0);
-			std::thread tred2(&Utils::CalcHistogram, Bdata.Scan0, i*dlzka,(i+1)*dlzka, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), std::ref(HistRed1[i]), std::ref(HistGreen1[i]), std::ref(HistBlue1[i]), std::ref(HistBright1[i]));
-		}
-		Utils::CalcHistogram(Bdata.Scan0, pt*dlzka, pBitmap->GetHeight(), Bdata.Stride,pBitmap->GetWidth(),pBitmap->GetHeight(), red, green, blue, jas);
-			
-//		tred2.join();
-		//Utils::CalcHistogram(Bdata.Scan0, Bdata.Stride, pBitmap->GetWidth(), pBitmap->GetHeight(), red, green, blue, jas);
+		std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
+
+		multi_thread(pt,dlzka , Bdata.Scan0, 0, pBitmap->GetHeight(), Bdata.Stride, pBitmap->GetWidth(), std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1));
+
 		for(int j=0;j<pt;j++)
 		for (int i = 0; i <= 255; i++) 
 		{
@@ -281,6 +280,7 @@ CApplicationDlg::CApplicationDlg(CWnd* pParent /*=NULL*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 	m_nMaxThreads = CountMaxThreads();
+	pt = 2;
 }
 
 void CApplicationDlg::DoDataExchange(CDataExchange* pDX)
@@ -325,7 +325,17 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_COMMAND(ID_THREADS_1, &CApplicationDlg::OnThreads1)
 	ON_UPDATE_COMMAND_UI(ID_THREADS_1, &CApplicationDlg::OnUpdateThreads1)
 	ON_COMMAND(ID_THREADS_2, &CApplicationDlg::OnThreads2)
-	ON_COMMAND(ID_THREADS_3, &CApplicationDlg::OnThreads3)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_2, &CApplicationDlg::OnUpdateThreads2)
+	ON_COMMAND(ID_THREADS_4, &CApplicationDlg::OnThreads4)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_4, &CApplicationDlg::OnUpdateThreads4)
+	ON_COMMAND(ID_THREADS_8, &CApplicationDlg::OnThreads8)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_8, &CApplicationDlg::OnUpdateThreads8)
+	ON_COMMAND(ID_THREADS_12, &CApplicationDlg::OnThreads12)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_12, &CApplicationDlg::OnUpdateThreads12)
+	ON_COMMAND(ID_THREADS_16, &CApplicationDlg::OnThreads16)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_16, &CApplicationDlg::OnUpdateThreads16)
+	ON_COMMAND(ID_THREADS_AUTO, &CApplicationDlg::OnThreadsAuto)
+	ON_UPDATE_COMMAND_UI(ID_THREADS_AUTO, &CApplicationDlg::OnUpdateThreadsAuto)
 END_MESSAGE_MAP()
 
 
@@ -695,7 +705,9 @@ void CApplicationDlg::OnFileClose()
 	m_ctrlFileList.DeleteAllItems();
 }
 
-void CApplicationDlg::funkcia(CString csFileName)
+
+
+void CApplicationDlg::single_tred(CString csFileName)
 {
 		std::vector<int> HistRed;
 		std::vector<int> HistBright;
@@ -707,7 +719,7 @@ void CApplicationDlg::funkcia(CString csFileName)
 		HistBright.clear();
 		Gdiplus::Bitmap *pBitmap = nullptr;
 		pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-		LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright);
+		LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright,pt,m_thread_id);
 		if (std::this_thread::get_id() == m_thread_id) {
 			std::tuple <Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(pBitmap, HistRed, HistGreen, HistBlue, HistBright);
 			SendMessage(WM_SET_BITMAP, (WPARAM)&ntuple);
@@ -716,6 +728,16 @@ void CApplicationDlg::funkcia(CString csFileName)
 		{
 			delete pBitmap;
 		}
+		CMenu* mmenu = GetMenu();
+		CMenu* submenu = mmenu->GetSubMenu(3);
+		submenu->EnableMenuItem(ID_THREADS_1, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_2, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_4, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_8, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_12, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_16, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_AUTO, MF_ENABLED);
+
 }
 
 
@@ -753,6 +775,12 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 		m_pBitmap = nullptr;
 	}
 
+	/*CMenu* mmenu = GetMenu();
+	mmenu->EnableMenuItem(mmenu->GetMenuItemID(0), MF_ENABLED);
+	mmenu->EnableMenuItem(mmenu->GetMenuItemID(1), MF_ENABLED);
+	mmenu->EnableMenuItem(mmenu->GetMenuItemID(2), MF_ENABLED);
+	mmenu->EnableMenuItem(mmenu->GetMenuItemID(3), MF_ENABLED);*/
+
 	m_bHistRed = false;
 	m_bHistGreen = false;
 	m_bHistBlue = false;
@@ -767,10 +795,32 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
-		std::thread tred(&CApplicationDlg::funkcia, this, csFileName);	
+		CMenu* mmenu = GetMenu();
+		//mmenu->EnableMenuItem(mmenu->GetMenuItemID(3), MF_GRAYED);
+		CMenu* submenu = mmenu->GetSubMenu(3);
+		submenu->EnableMenuItem(ID_THREADS_1, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_2, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_4, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_8, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_12, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_16, MF_DISABLED);
+		submenu->EnableMenuItem(ID_THREADS_AUTO, MF_DISABLED);
+
+
+		std::thread tred(&CApplicationDlg::single_tred, this, csFileName);	
 		m_thread_id = tred.get_id();
-		tred.detach();
-		
+		tred.detach();	
+
+/*		CMenu* mmenu = GetMenu();
+		CMenu* submenu = mmenu->GetSubMenu(3);
+		submenu->EnableMenuItem(ID_THREADS_1, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_2, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_4, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_8, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_12, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_16, MF_ENABLED);
+		submenu->EnableMenuItem(ID_THREADS_AUTO, MF_ENABLED);
+		*/
 	}
 
 //	m_ctrlImage.Invalidate();
@@ -804,6 +854,10 @@ void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && m_ctrlLog.IsWindowVisible());
 }
 
+int CApplicationDlg::dajpt()
+{
+	return pt;
+}
 
 void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
 {
@@ -882,8 +936,66 @@ void CApplicationDlg::OnThreads1()
 
 void CApplicationDlg::OnUpdateThreads1(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck();
-		// TODO: Add your command update UI handler code here
+	pCmdUI->SetCheck(pt==1);
+}
+
+void CApplicationDlg::OnThreads4()
+{
+	pt = 4;
+}
+
+
+void CApplicationDlg::OnUpdateThreads4(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(pt==4);
+}
+
+
+void CApplicationDlg::OnThreads8()
+{
+	pt = 8;
+}
+
+
+void CApplicationDlg::OnUpdateThreads8(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(pt==8);
+}
+
+
+void CApplicationDlg::OnThreads12()
+{
+	pt = 12;
+}
+
+
+void CApplicationDlg::OnUpdateThreads12(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(pt==12);
+}
+
+
+void CApplicationDlg::OnThreads16()
+{
+	pt = 16;
+}
+
+
+void CApplicationDlg::OnUpdateThreads16(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(pt==16);
+}
+
+
+void CApplicationDlg::OnThreadsAuto()
+{
+	pt = m_nMaxThreads;
+}
+
+
+void CApplicationDlg::OnUpdateThreadsAuto(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(pt==m_nMaxThreads);
 }
 
 void CApplicationDlg::OnThreads2()
@@ -891,7 +1003,8 @@ void CApplicationDlg::OnThreads2()
 	pt = 2;
 }
 
-void CApplicationDlg::OnThreads3()
+
+void CApplicationDlg::OnUpdateThreads2(CCmdUI *pCmdUI)
 {
-	pt = 4;
+	pCmdUI->SetCheck(pt==2);
 }
