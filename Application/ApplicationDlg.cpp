@@ -1,7 +1,4 @@
-﻿//odstranit funkciu dajpt()
-//stale sa updateuju polozky v menu, aj ked na ne neklikam. preco?
-//dorobit testy
-
+﻿
 // ApplicationDlg.cpp : implementation file
 //
 
@@ -852,11 +849,6 @@ void CApplicationDlg::OnLogClear()
 void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && m_ctrlLog.IsWindowVisible());
-}
-
-int CApplicationDlg::dajpt()
-{
-	return pt;
 }
 
 void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)

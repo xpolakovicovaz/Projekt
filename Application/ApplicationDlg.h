@@ -85,7 +85,6 @@ public:
 	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
 	afx_msg void single_tred(CString csFileName);
-	afx_msg int dajpt();
 
 protected:
 	CListCtrl m_ctrlFileList;
