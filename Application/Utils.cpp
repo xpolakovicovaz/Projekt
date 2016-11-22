@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utils.h"
-#include "ApplicationDlg.h"
 
 namespace Utils
 {
@@ -42,39 +41,65 @@ namespace Utils
 
 	}
 
-	void CalcHistogram(void* scan0,int zaciatok, int koniec, BYTE stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas)
+	void CalcHistogram(void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::thread::id m_thread_id)
+
 	{
+
 		int r, g, b;
+
 		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
+
 		for (int y = zaciatok; y < koniec; y++)
+
 		{
+
 			for (int x = 0; x < s; x++)
+
 			{
+
 				r = ((*pLine) >> 16) & 0xff;
+
 				g = ((*pLine) >> 8) & 0xff;
+
 				b = (int)(*pLine) & 0xff;
+
 				red[r]++;
+
 				green[g]++;
+
 				blue[b]++;
+
 				jas[(int)(0.2126*r + 0.7152*g + 0.0722*b)]++;
+
 				pLine++;
+
 			}
+
 			pLine = (uint32_t*)((uint8_t*)scan0 + stride*(y + 1));
-//			if (std::this_thread::get_id() != m_thread_id)
-//				return;
+
+			//			if (std::this_thread::get_id() != m_thread_id)
+
+			//				return;
+
 		}
+
 		return;
+
 		//delete (pLine);
+
 	}
 
-	void multi_thread(int pt, int dlzka, void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas)
+	void multi_thread(int pt, int dlzka, void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::thread::id m_thread_id)
+
 	{
+
 		std::vector<std::thread> tred(pt);
+
 		for (int i = 0; i < pt - 1; i++)
 		{
-			tred[i] = std::thread(&Utils::CalcHistogram, scan0, i*dlzka, (i + 1)*dlzka, stride, s, std::ref(red[i]), std::ref(green[i]), std::ref(blue[i]), std::ref(jas[i]));
+			tred[i] = std::thread(&Utils::CalcHistogram, scan0, i*dlzka, (i + 1)*dlzka, stride, s, std::ref(red[i]), std::ref(green[i]), std::ref(blue[i]), std::ref(jas[i]), m_thread_id);
 		}
-		Utils::CalcHistogram(scan0, (pt - 1)*dlzka, (pt)*dlzka, stride, s, std::ref(red[pt - 1]), std::ref(green[pt - 1]), std::ref(blue[pt - 1]), std::ref(jas[pt - 1]));
+		Utils::CalcHistogram(scan0, (pt - 1)*dlzka, (pt)*dlzka, stride, s, std::ref(red[pt - 1]), std::ref(green[pt - 1]), std::ref(blue[pt - 1]), std::ref(jas[pt - 1]), m_thread_id);
 
 		for (int i = 0; i < pt - 1; i++)
 		{

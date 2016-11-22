@@ -63,6 +63,7 @@ protected:
 	bool m_bHistGreen;
 	bool m_bHistBlue;
 	bool m_bHistBright;
+	bool m_zobrazene;
 	std::vector<int> m_vHistRed;
 	std::vector<int> m_vHistBright;
 	std::vector<int> m_vHistGreen;
@@ -85,6 +86,7 @@ public:
 	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
 	afx_msg void single_tred(CString csFileName);
+	afx_msg void posterizuj( std::thread::id  m_thread_id);
 
 protected:
 	CListCtrl m_ctrlFileList;
@@ -100,6 +102,7 @@ protected:
 	CLogDlg m_ctrlLog;
 
 	Gdiplus::Bitmap * m_pBitmap;
+	Gdiplus::Bitmap * m_noveBitmap;
 	DWORD m_nMaxThreads;
 
 public:
@@ -130,4 +133,8 @@ public:
 	afx_msg void OnUpdateThreads16(CCmdUI *pCmdUI);
 	afx_msg void OnThreadsAuto();
 	afx_msg void OnUpdateThreadsAuto(CCmdUI *pCmdUI);
+	afx_msg void OnEfektPostreization();
+	afx_msg void OnUpdateEfektPostreization(CCmdUI *pCmdUI);
+	afx_msg void OnEfektZobrazi32793();
+	afx_msg void OnUpdateEfektZobrazi32793(CCmdUI *pCmdUI);
 };
