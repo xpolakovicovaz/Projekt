@@ -5,6 +5,7 @@
 #include <GdiPlus.h>
 #include "Library.h"
 #include "../Application/Utils.h"
+#include <functional>
 
 
 //// This is an example of an exported variable
@@ -31,15 +32,12 @@ LIBRARY_API std::pair< CString, std::vector<CString> > ParseFiles(LPCTSTR lpstrF
 	return Utils::ParseFiles(lpstrFile);
 }
 
-LIBRARY_API void CalcHistogram(void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int>& red, std::vector<int>& green, std::vector<int>& blue, std::vector<int>& jas)
+LIBRARY_API void CalcHistogram(void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 {
-	return Utils::CalcHistogram(scan0, zaciatok, koniec, stride, s, red, green, blue, jas);
+	return Utils::CalcHistogram(scan0, zaciatok, koniec, stride, s, red, green, blue, jas, fn);
 }
 
-LIBRARY_API void multi_thread(int pt, int dlzka, void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>>& red, std::vector<std::vector<int>>& green, std::vector<std::vector<int>>& blue, std::vector<std::vector<int>>& jas)
+LIBRARY_API void multi_thread(int pt, int dlzka, void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>>& red, std::vector<std::vector<int>>& green, std::vector<std::vector<int>>& blue, std::vector<std::vector<int>>& jas, std::function<bool()> fn)
 {
-	return Utils::multi_thread(pt, dlzka, scan0, zaciatok, koniec, stride, s, std::ref(red), std::ref(green), std::ref(blue), std::ref(jas));
+	return Utils::multi_thread(pt, dlzka, scan0, zaciatok, koniec, stride, s, std::ref(red), std::ref(green), std::ref(blue), std::ref(jas), fn);
 }
-
-
-

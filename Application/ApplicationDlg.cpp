@@ -1,9 +1,8 @@
-﻿
- // ApplicationDlg.cpp : implementation file
+//dorobit testy
+//prerobit funkciu onsetcursor
 
-//vytvorit m_noveBitmap cez Clone z m_pBitmap
-//pozri zosit
-
+// ApplicationDlg.cpp : implementation file
+//
 #include "stdafx.h"
 #include "Application.h"
 #include "ApplicationDlg.h"
@@ -16,7 +15,9 @@
 #include <cstdint>
 #include <thread>
 #include <atomic>
-#include <tuple>
+#include <functional>
+
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -26,9 +27,10 @@
 #define MIN_SIZE 300
 #endif
 
+
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id)
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
 	{
 		int r = 0;
 		int g = 0;
@@ -55,7 +57,7 @@ namespace
 		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
 		std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
 
-		Utils::multi_thread(pt, dlzka, Bdata.Scan0, 0, pBitmap->GetHeight(), Bdata.Stride, pBitmap->GetWidth(), std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), m_thread_id);
+		Utils::multi_thread(pt, dlzka, Bdata.Scan0, 0, pBitmap->GetHeight(), Bdata.Stride, pBitmap->GetWidth(), std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), fn);
 
 		for (int j = 0; j<pt; j++)
 			for (int i = 0; i <= 255; i++)
@@ -70,10 +72,14 @@ namespace
 	}
 }
 
-void CApplicationDlg::posterizuj(std::thread::id  m_thread_id)
+void CApplicationDlg::posterizuj()
 {
-	int delenie = 20;
-	
+	if (m_noveBitmap != nullptr)
+	{
+		delete m_noveBitmap;
+		m_noveBitmap = nullptr;
+	}
+
 	Gdiplus::BitmapData Bdata;
 	Gdiplus::Rect rect(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight());
 	m_noveBitmap = m_pBitmap->Clone(rect, PixelFormat32bppRGB);
@@ -89,7 +95,7 @@ void CApplicationDlg::posterizuj(std::thread::id  m_thread_id)
 			r = ((*pLine) >> 16) & 0xff;
 			g = ((*pLine) >> 8) & 0xff;
 			b = (int)(*pLine) & 0xff;
-			m_noveBitmap->SetPixel(x,y, Gdiplus::Color((r%delenie)*delenie, (g%delenie)*delenie , (b%delenie)*delenie));
+			m_noveBitmap->SetPixel(x, y, Gdiplus::Color(max(0, min(255, (r / m_pf + 1)*m_pf)), max(0, min(255, (g / m_pf +1)*m_pf)), max(0, min(255, (b / m_pf + 1)*m_pf))));
 			pLine++;
 		}
 		pLine = (uint32_t*)((uint8_t*)Bdata.Scan0 + Bdata.Stride*(y + 1));
@@ -97,15 +103,17 @@ void CApplicationDlg::posterizuj(std::thread::id  m_thread_id)
 	m_pBitmap->UnlockBits(&Bdata);
 }
 
+
 void CStaticImage::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	GetParent()->SendMessage(CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
+	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
 }
 
 void CStaticHistogram::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	GetParent()->SendMessage(CApplicationDlg::WM_DRAW_HISTOGRAM, (WPARAM)lpDrawItemStruct);
+	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_HISTOGRAM, (WPARAM)lpDrawItemStruct);
 }
+
 
 // CAboutDlg dialog used for App About
 
@@ -113,7 +121,8 @@ class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg() : CDialogEx(IDD_ABOUTBOX) {}
-	// Dialog Data
+
+// Dialog Data
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
@@ -123,16 +132,21 @@ protected:
 	{
 		CDialogEx::DoDataExchange(pDX);
 	}
-	// Implementation
+
+// Implementation
 protected:
 public:
+
 };
+
+
 
 namespace
 {
 	typedef BOOL(WINAPI *LPFN_GLPI)(
 		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION,
 		PDWORD);
+
 
 	// Helper function to count set bits in the processor mask.
 	DWORD CountSetBits(ULONG_PTR bitMask)
@@ -141,13 +155,16 @@ namespace
 		DWORD bitSetCount = 0;
 		ULONG_PTR bitTest = (ULONG_PTR)1 << LSHIFT;
 		DWORD i;
+
 		for (i = 0; i <= LSHIFT; ++i)
 		{
 			bitSetCount += ((bitMask & bitTest) ? 1 : 0);
 			bitTest /= 2;
 		}
+
 		return bitSetCount;
 	}
+
 	DWORD CountMaxThreads()
 	{
 		LPFN_GLPI glpi;
@@ -246,7 +263,7 @@ namespace
 				processorPackageCount++;
 				break;
 
-		default:
+			default:
 				TRACE(TEXT("\nError: Unsupported LOGICAL_PROCESSOR_RELATIONSHIP value.\n"));
 				break;
 			}
@@ -268,6 +285,8 @@ namespace
 }
 
 // CApplicationDlg dialog
+
+
 CApplicationDlg::CApplicationDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_APPLICATION_DIALOG, pParent)
 	, m_pBitmap(nullptr)
@@ -275,7 +294,6 @@ CApplicationDlg::CApplicationDlg(CWnd* pParent /*=NULL*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 	m_nMaxThreads = CountMaxThreads();
-	pt = 2;
 }
 
 void CApplicationDlg::DoDataExchange(CDataExchange* pDX)
@@ -334,7 +352,34 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_EFEKT_POSTREIZATION, &CApplicationDlg::OnUpdateEfektPostreization)
 	ON_COMMAND(ID_EFEKT_ZOBRAZI32793, &CApplicationDlg::OnEfektZobrazi32793)
 	ON_UPDATE_COMMAND_UI(ID_EFEKT_ZOBRAZI32793, &CApplicationDlg::OnUpdateEfektZobrazi32793)
+	ON_COMMAND(ID_POSTREIZATION_8FARIEB, &CApplicationDlg::OnPostreization8farieb)
+	ON_UPDATE_COMMAND_UI(ID_POSTREIZATION_8FARIEB, &CApplicationDlg::OnUpdatePostreization8farieb)
+	ON_COMMAND(ID_POSTREIZATION_16FARIE, &CApplicationDlg::OnPostreization16farie)
+	ON_UPDATE_COMMAND_UI(ID_POSTREIZATION_16FARIE, &CApplicationDlg::OnUpdatePostreization16farie)
+	ON_COMMAND(ID_POSTREIZATION_512FARIEB, &CApplicationDlg::OnPostreization512farieb)
+	ON_UPDATE_COMMAND_UI(ID_POSTREIZATION_512FARIEB, &CApplicationDlg::OnUpdatePostreization512farieb)
+	ON_COMMAND(ID_POSTREIZATION_4096FARIEB, &CApplicationDlg::OnPostreization4096farieb)
+	ON_UPDATE_COMMAND_UI(ID_POSTREIZATION_4096FARIEB, &CApplicationDlg::OnUpdatePostreization4096farieb)
+	ON_COMMAND(ID_EFEKT_X, &CApplicationDlg::OnEfektX)
+	ON_UPDATE_COMMAND_UI(ID_EFEKT_X, &CApplicationDlg::OnUpdateEfektX)
+	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
+
+
+
+void CApplicationDlg::OnMouseMove(UINT nFlags, CPoint point)
+{
+	if (abs(point.y - m_xy)<3)
+		::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_SIZENS));
+	else
+		::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
+	
+	if (nFlags == MK_LBUTTON)
+	{
+		m_xy = point.y;
+		m_ctrlImage.Invalidate();
+	}
+}
 
 void CApplicationDlg::OnDestroy()
 {
@@ -350,12 +395,15 @@ void CApplicationDlg::OnDestroy()
 
 /*void CApplicationDlg::drawrect(std::vector<int> vektor,CDC &DC,COLORREF f,double scX,double scY)
 {
-Gdiplus::Graphics g(DC);
-for (BYTE i = 0; i < 255; i++)
-{
-CRect stlpik(floor(i*scX), floor(m_ptHistogram.y - max(0,log(vektor[i])) * scY),floor( (i + 1)*scX + 1), m_ptHistogram.y);
-DC.FillSolidRect(stlpik, f);
-}
+	Gdiplus::Graphics g(DC);
+
+	for (BYTE i = 0; i < 255; i++)
+	{
+		CRect stlpik(floor(i*scX), floor(m_ptHistogram.y - max(0,log(vektor[i])) * scY),floor( (i + 1)*scX + 1), m_ptHistogram.y);
+		DC.FillSolidRect(stlpik, f);
+
+	}
+
 }*/
 
 void CApplicationDlg::drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color f, double scX, double scY)
@@ -374,32 +422,34 @@ void CApplicationDlg::drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color 
 	g.FillPolygon(&Gdiplus::SolidBrush(f), bod, 258);
 }
 
+
 LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 {
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 	pDC->FillSolidRect(&(lpDI->rcItem), RGB(255, 255, 255));
-	int max = 1;
+	int max=1;
 	if (m_vHistRed.size() != 0) {
 		CRect rect(&(lpDI->rcItem));
-		for (int i = 0; i<256; i++)
+		for (int i=0;i<256;i++)
 		{
 			if (m_vHistRed[i]> max)max = m_vHistRed[i];
 			if (m_vHistGreen[i]> max)max = m_vHistGreen[i];
 			if (m_vHistBlue[i]> max)max = m_vHistBlue[i];
 			if (m_vHistBright[i]> max)max = m_vHistBright[i];
 		}
-
+		
 		double scalY = double(rect.Height()) / double(log(max));
 		double scalX = rect.Width() / 257.0;
-		if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150, 255, 0, 0), scalX, scalY);
-		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150, 0, 255, 0), scalX, scalY);
-		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150, 0, 0, 255), scalX, scalY);
-		if (m_bHistBright)drawrect(m_vHistBright, *pDC, Gdiplus::Color(150, 0, 0, 0), scalX, scalY);
+		if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150,255,0,0), scalX, scalY);
+		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150,0, 255, 0), scalX, scalY);
+		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150,0, 0, 255), scalX, scalY);
+		if (m_bHistBright)drawrect(m_vHistBright, *pDC, Gdiplus::Color(150,0, 0, 0), scalX, scalY);
 	}
 
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
+
 	return S_OK;
 }
 
@@ -436,24 +486,44 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 			pDC->FillSolidRect(rct.left, rct.top, rct.Width(), nBanner, RGB(255, 255, 255));
 			pDC->FillSolidRect(rct.left, rct.bottom - nBanner - 2, rct.Width(), nBanner + 2, RGB(255, 255, 255));
 		}
-
+		
 		if (nWidth < (UINT)rct.Width())
 		{
 			UINT nBanner = (rct.Width() - nWidth) / 2;
 			pDC->FillSolidRect(rct.left, rct.top, nBanner, rct.Height(), RGB(255, 255, 255));
 			pDC->FillSolidRect(rct.right - nBanner - 2, rct.top, nBanner + 2, rct.Height(), RGB(255, 255, 255));
 		}
-
+		//TU TO JE
 		Gdiplus::Graphics gr(lpDI->hDC);
 		Gdiplus::Rect destRect(rct.left + (rct.Width() - nWidth) / 2, rct.top + (rct.Height() - nHeight) / 2, nWidth, nHeight);
-		if (m_zobrazene) { gr.DrawImage(m_noveBitmap, destRect); }
-		else	
-			gr.DrawImage(m_pBitmap, destRect);
+
+		if (m_zobrazene)m_xy = rct.top + (rct.Height() - nHeight) / 2+nHeight/2;
+
+		if (m_zc)
+		{
+			int stred = rct.top + (rct.Height() - nHeight) / 2 + nHeight / 2;
+			if (m_xy > stred + nHeight / 2) m_xy = stred + nHeight / 2;
+			if (m_xy < stred - nHeight / 2) m_xy = stred - nHeight / 2;
+
+			Gdiplus::Pen bp(Gdiplus::Color(255, 0, 0, 0), 3);
+			Gdiplus::Pen wp(Gdiplus::Color(255, 255, 255, 255), 1);
+			gr.DrawImage(m_noveBitmap, destRect);
+			gr.DrawImage(m_pBitmap->Clone(0,(m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight)), /*m_pBitmap->GetHeight()*/  PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
+			gr.DrawLine(&bp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
+			gr.DrawLine(&wp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
+		}
+		else
+		{
+			if (m_zobrazene)
+				gr.DrawImage(m_noveBitmap, destRect);
+			else
+				gr.DrawImage(m_pBitmap, destRect);
+		}	
 	}
 
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
-	
+
 	return S_OK;
 }
 
@@ -500,6 +570,7 @@ void CApplicationDlg::OnSize(UINT nType, int cx, int cy)
 	m_ctrlFileList.SetWindowPos(nullptr, -1, -1, m_ptFileList.x, cy - m_ptFileList.y, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
 	m_ctrlFileList.Invalidate();
 
+
 	m_ctrlImage.SetWindowPos(nullptr, -1, -1, cx - m_ptImage.x, cy - m_ptImage.y, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
 	m_ctrlImage.Invalidate();
 
@@ -544,7 +615,7 @@ BOOL CApplicationDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-									// TODO: Add extra initialization here
+	// TODO: Add extra initialization here
 	CRect rct;
 	m_ctrlFileList.GetClientRect(&rct);
 	m_ctrlFileList.InsertColumn(0, _T("Filename"), 0, rct.Width());
@@ -568,7 +639,11 @@ BOOL CApplicationDlg::OnInitDialog()
 	m_ctrlLog.ShowWindow(SW_HIDE);
 
 	m_zobrazene = false;
-	pt = 2;
+	m_xy = -10;
+	m_zc = false;
+	m_pocita = false;
+	m_pt = 2;
+	m_noveBitmap = nullptr;
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -657,7 +732,7 @@ void CApplicationDlg::OnFileOpen()
 
 		std::vector<CString> names;
 
-		std::tie(m_csDirectory, names) = Utils::ParseFiles(cs);
+		std::tie( m_csDirectory, names) = Utils::ParseFiles(cs);
 
 		for (int i = 0; i < (int)names.size(); ++i)
 		{
@@ -672,10 +747,12 @@ void CApplicationDlg::OnFileOpen()
 	Invalidate();
 }
 
+
 void CApplicationDlg::OnUpdateFileOpen(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(TRUE);
 }
+
 
 void CApplicationDlg::OnFileClose()
 {
@@ -687,6 +764,11 @@ void CApplicationDlg::OnFileClose()
 	{
 		delete m_pBitmap;
 		m_pBitmap = nullptr;
+	}	
+	if (m_noveBitmap != nullptr)
+	{
+		delete m_noveBitmap;
+		m_noveBitmap = nullptr;
 	}
 	m_ctrlImage.Invalidate();
 	m_ctrlHistogram.Invalidate();
@@ -706,16 +788,17 @@ void CApplicationDlg::single_tred(CString csFileName)
 	HistBright.clear();
 	Gdiplus::Bitmap *pBitmap = nullptr;
 	pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
-	LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright, pt, m_thread_id);
+	std::thread::id a_tred = std::this_thread::get_id();
+	LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
 	if (std::this_thread::get_id() == m_thread_id) {
-		std::tuple <Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(pBitmap, HistRed, HistGreen, HistBlue, HistBright);
+		std::tuple <Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(pBitmap, a_tred, HistRed, HistGreen, HistBlue, HistBright);
 		SendMessage(WM_SET_BITMAP, (WPARAM)&ntuple);
 	}
 	else
 	{
 		delete pBitmap;
 	}
-	CMenu* mmenu = GetMenu();
+	/*CMenu* mmenu = GetMenu();
 	CMenu* submenu = mmenu->GetSubMenu(3);
 	submenu->EnableMenuItem(ID_THREADS_1, MF_ENABLED);
 	submenu->EnableMenuItem(ID_THREADS_2, MF_ENABLED);
@@ -724,6 +807,7 @@ void CApplicationDlg::single_tred(CString csFileName)
 	submenu->EnableMenuItem(ID_THREADS_12, MF_ENABLED);
 	submenu->EnableMenuItem(ID_THREADS_16, MF_ENABLED);
 	submenu->EnableMenuItem(ID_THREADS_AUTO, MF_ENABLED);
+	*/
 }
 
 void CApplicationDlg::OnUpdateFileClose(CCmdUI *pCmdUI)
@@ -735,7 +819,6 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 {
 	CMenu* pMainMenu = GetMenu();
 	CCmdUI cmdUI;
-
 	for (UINT n = 0; n < (UINT)pMainMenu->GetMenuItemCount(); ++n)
 	{
 		CMenu* pSubMenu = pMainMenu->GetSubMenu(n);
@@ -760,6 +843,12 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 		delete m_pBitmap;
 		m_pBitmap = nullptr;
 	}
+	if (m_noveBitmap != nullptr)
+	{
+		delete m_noveBitmap;
+		m_noveBitmap = nullptr;
+	}
+
 	m_bHistRed = false;
 	m_bHistGreen = false;
 	m_bHistBlue = false;
@@ -771,9 +860,12 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	POSITION pos = m_ctrlFileList.GetFirstSelectedItemPosition();
 	if (pos)
 		csFileName = m_csDirectory + m_ctrlFileList.GetItemText(m_ctrlFileList.GetNextSelectedItem(pos), 0);
+
 	if (!csFileName.IsEmpty())
 	{
-		CMenu* mmenu = GetMenu();
+		m_pocita = true;
+	//	SendMessage(WM_SETCURSOR, (WPARAM)NULL);
+		/*CMenu* mmenu = GetMenu();
 		CMenu* submenu = mmenu->GetSubMenu(3);
 		submenu->EnableMenuItem(ID_THREADS_1, MF_DISABLED);
 		submenu->EnableMenuItem(ID_THREADS_2, MF_DISABLED);
@@ -782,43 +874,52 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 		submenu->EnableMenuItem(ID_THREADS_12, MF_DISABLED);
 		submenu->EnableMenuItem(ID_THREADS_16, MF_DISABLED);
 		submenu->EnableMenuItem(ID_THREADS_AUTO, MF_DISABLED);
-
+		*/
 		std::thread tred(&CApplicationDlg::single_tred, this, csFileName);
 		m_thread_id = tred.get_id();
 
 		tred.detach();
 	}
-	//	m_ctrlImage.Invalidate();
-	//	m_ctrlHistogram.Invalidate();
+
 	*pResult = 0;
 	m_zobrazene = false;
+	m_xy = -10;
+	m_zc = false;
+	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
+
 
 void CApplicationDlg::OnLogOpen()
 {
 	m_ctrlLog.ShowWindow(SW_SHOW);
 }
 
+
 void CApplicationDlg::OnUpdateLogOpen(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && !m_ctrlLog.IsWindowVisible());
 }
 
+
 void CApplicationDlg::OnLogClear()
 {
-	m_ctrlLog.SendMessage(CLogDlg::WM_TEXT);
+	m_ctrlLog.SendMessage( CLogDlg::WM_TEXT);
 }
+
 
 void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && m_ctrlLog.IsWindowVisible());
 }
 
+
 void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
 	pCmdUI->SetCheck(m_bHistRed);
 }
+
 
 void CApplicationDlg::OnHistogramRed()
 {
@@ -832,11 +933,14 @@ void CApplicationDlg::OnHistogramBright()
 	Invalidate();
 }
 
+
 void CApplicationDlg::OnUpdateHistogramBright(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
 	pCmdUI->SetCheck(m_bHistBright);
+
 }
+
 
 void CApplicationDlg::OnHistogramBlue()
 {
@@ -854,6 +958,7 @@ void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
 {
 	pCmdUI->SetCheck(m_bHistGreen);
 	pCmdUI->Enable(m_pBitmap != NULL);
+
 }
 
 void CApplicationDlg::OnHistogramGreen()
@@ -864,111 +969,197 @@ void CApplicationDlg::OnHistogramGreen()
 
 LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 {
-	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&>*)(wParam);
-	m_pBitmap = std::get<0>(*ptuple);
-	m_vHistRed = std::move(std::get<1>(*ptuple));
-	m_vHistGreen = std::move(std::get<2>(*ptuple));
-	m_vHistBlue = std::move(std::get<3>(*ptuple));
-	m_vHistBright = std::move(std::get<4>(*ptuple));
-	m_ctrlImage.Invalidate();
-	m_ctrlHistogram.Invalidate();
-
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> *)(wParam);
+	if (std::get<1>(*ptuple) == m_thread_id) {
+		m_pBitmap = std::get<0>(*ptuple);
+		m_vHistRed = std::move(std::get<2>(*ptuple));
+		m_vHistGreen = std::move(std::get<3>(*ptuple));
+		m_vHistBlue = std::move(std::get<4>(*ptuple));
+		m_vHistBright = std::move(std::get<5>(*ptuple));
+		m_ctrlImage.Invalidate();
+		m_ctrlHistogram.Invalidate();
+	}
+	m_pocita = false;
 	return TRUE;
 }
 
 void CApplicationDlg::OnThreads1()
 {
-	pt = 1;
+	m_pt = 1;
 }
 
 void CApplicationDlg::OnUpdateThreads1(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 1);
+	pCmdUI->SetCheck(m_pt == 1);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreads4()
 {
-	pt = 4;
+	m_pt = 4;
 }
 
 void CApplicationDlg::OnUpdateThreads4(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 4);
+	pCmdUI->SetCheck(m_pt == 4);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreads8()
 {
-	pt = 8;
+	m_pt = 8;
 }
 
 void CApplicationDlg::OnUpdateThreads8(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 8);
+	pCmdUI->SetCheck(m_pt == 8);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreads12()
 {
-	pt = 12;
+	m_pt = 12;
 }
 
 void CApplicationDlg::OnUpdateThreads12(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 12);
+	pCmdUI->SetCheck(m_pt == 12);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreads16()
 {
-	pt = 16;
+	m_pt = 16;
 }
 
 void CApplicationDlg::OnUpdateThreads16(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 16);
+	pCmdUI->SetCheck(m_pt == 16);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreadsAuto()
 {
-	pt = m_nMaxThreads;
+	m_pt = m_nMaxThreads;
 }
 
 void CApplicationDlg::OnUpdateThreadsAuto(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == m_nMaxThreads);
+	pCmdUI->SetCheck(m_pt == m_nMaxThreads);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnThreads2()
 {
-	pt = 2;
+	m_pt = 2;
 }
 
 void CApplicationDlg::OnUpdateThreads2(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(pt == 2);
+	pCmdUI->SetCheck(m_pt == 2);
+	pCmdUI->Enable(!m_pocita);
 }
 
 void CApplicationDlg::OnEfektPostreization()
 {
-	posterizuj(m_thread_id);
+
 }
-
-
 
 void CApplicationDlg::OnUpdateEfektPostreization(CCmdUI *pCmdUI)
 {
-	pCmdUI->SetCheck(m_zobrazene);
-	// TODO: Add your command update UI handler code here
 }
 
 
 void CApplicationDlg::OnEfektZobrazi32793()
 {
+	m_zobrazene = !m_zobrazene;
+	m_zc = false;
+	m_ctrlImage.Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateEfektZobrazi32793(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_zobrazene);
+	pCmdUI->Enable(m_noveBitmap != NULL);
+}
+
+
+void CApplicationDlg::OnPostreization8farieb()
+{
+	m_pf = 128;
+	posterizuj();
+	m_zobrazene = true;
+	m_ctrlImage.Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdatePostreization8farieb(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_pf == 128);
+	pCmdUI->Enable(m_pBitmap != NULL);
+}
+
+
+void CApplicationDlg::OnPostreization16farie()
+{
+	m_pf = 64;
+	posterizuj();
+	m_zobrazene = true;
+	m_ctrlImage.Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdatePostreization16farie(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_pf == 64);
+	pCmdUI->Enable(m_pBitmap != NULL);
+}
+
+
+void CApplicationDlg::OnPostreization512farieb()
+{
+	m_pf = 32;
+	posterizuj();
+	m_zobrazene = true;
+	m_ctrlImage.Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdatePostreization512farieb(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_pf == 32);
+	pCmdUI->Enable(m_pBitmap != NULL);
+}
+
+
+void CApplicationDlg::OnPostreization4096farieb()
+{
+	m_pf = 16;
+	posterizuj();
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
 	// TODO: Add your command handler code here
 }
 
 
-void CApplicationDlg::OnUpdateEfektZobrazi32793(CCmdUI *pCmdUI)
+void CApplicationDlg::OnUpdatePostreization4096farieb(CCmdUI *pCmdUI)
 {
-	// TODO: Add your command update UI handler code here
+	pCmdUI->SetCheck(m_pf == 16);
+	pCmdUI->Enable(m_pBitmap != NULL);
+}
+
+
+void CApplicationDlg::OnEfektX()
+{
+	m_zobrazene = false;
+	m_zc = !m_zc;
+	m_ctrlImage.Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateEfektX(CCmdUI *pCmdUI)
+{
+	pCmdUI->SetCheck(m_zc);
+	pCmdUI->Enable(m_noveBitmap!=NULL);
 }

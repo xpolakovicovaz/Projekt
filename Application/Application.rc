@@ -141,7 +141,7 @@ BEGIN
         MENUITEM "&Blue",                       ID_HISTOGRAM_BLUE
         MENUITEM "Brightnes&s",                 ID_HISTOGRAM_BRIGHT
     END
-    POPUP "Threads"
+    POPUP "&Threads"
     BEGIN
         MENUITEM "1",                           ID_THREADS_1
         MENUITEM "2",                           ID_THREADS_2, CHECKED
@@ -151,9 +151,15 @@ BEGIN
         MENUITEM "16",                          ID_THREADS_16
         MENUITEM "auto",                        ID_THREADS_AUTO
     END
-    POPUP "Efekt"
+    POPUP "&Efekt"
     BEGIN
-        MENUITEM "Postreization",               ID_EFEKT_POSTREIZATION
+        POPUP "Posterizacia"
+        BEGIN
+            MENUITEM "8 farieb",                    ID_POSTREIZATION_8FARIEB
+            MENUITEM "32 farieb",                   ID_POSTREIZATION_16FARIE
+            MENUITEM "512 farieb",                  ID_POSTREIZATION_512FARIEB
+            MENUITEM "4096 farieb",                 ID_POSTREIZATION_4096FARIEB
+        END
         MENUITEM SEPARATOR
         MENUITEM "Zobraziù",                    ID_EFEKT_ZOBRAZI32793
         MENUITEM "x/y",                         ID_EFEKT_X
