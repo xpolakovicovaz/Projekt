@@ -2,7 +2,7 @@
 #include "Utils.h"
 #include <functional>
 #include <thread>
-
+#include <vector>
 
 namespace Utils
 {
@@ -84,5 +84,78 @@ namespace Utils
 		}
 	}
 
+	void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::function<bool()> fn)
+	{
+		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
+		uint32_t *noveLine = (uint32_t*)((uint8_t*)novescan0 + novestride*(zaciatok));
+		int r, g, b;
 
+		for (int y = zaciatok; y < koniec; y++)
+		{
+			for (int x = 0; x < s; x++)
+			{
+				r = ((*pLine) >> 16) & 0xff;
+				g = ((*pLine) >> 8) & 0xff;
+				b = (int)(*pLine) & 0xff;
+
+				r = max(0, min(255, (r / pf + 1)*pf));
+				g = max(0, min(255, (g / pf + 1)*pf));
+				b = max(0, min(255, (b / pf + 1)*pf));
+
+				*noveLine = ((r << 16) & 0xff0000 | (g << 8) & 0xff00 | (b) & 0xff);
+				
+				pLine++;
+				noveLine++;
+			}
+			pLine = (uint32_t*)((uint8_t*)scan0 + stride*(y + 1));
+			noveLine = (uint32_t*)((uint8_t*)novescan0 + novestride*(y + 1));
+			if (fn())
+				return;
+		}
+		return;
+	}
+
+	void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::function<bool()> fn)
+	{
+		std::vector<std::thread> tred(pt);
+		for (int i = 0; i < pt - 1; i++)
+		{
+			tred[i] = std::thread(&Utils::posterizuj, pf, scan0, novescan0, i*dlzka, (i + 1)*dlzka, stride,novestride, s, fn);
+		}
+		Utils::posterizuj(pf, scan0, novescan0,(pt - 1)*dlzka, koniec, stride, novestride, s, fn);
+		
+		for (int i = 0; i < pt - 1; i++)
+		{
+			tred[i].join();
+		}		
+	}
+
+	void novehist(int pf, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::vector<int> &novered, std::vector<int> &novegreen, std::vector<int> &noveblue, std::vector<int> &novejas)
+	{
+		int f;
+		int qwe = 1;
+		novered.clear();
+		novegreen.clear();
+		noveblue.clear();
+		novejas.clear();
+		novered.assign(256, 0);
+		novegreen.assign(256, 0);
+		noveblue.assign(256, 0);
+		novejas.assign(256, 0);
+
+		for (int i = 0; i < 256; i++)
+		{
+			f = min(qwe*pf, 255);
+			while (i <= f)
+			{
+				novered[f] += red[i];
+				novegreen[f] += green[i];
+				noveblue[f] += blue[i];
+				novejas[f] += jas[i];
+				i++;
+			}
+			qwe++;
+		}
+		return;
+	}
 }

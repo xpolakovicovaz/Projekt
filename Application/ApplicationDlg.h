@@ -32,7 +32,8 @@ public:
 	{
 		WM_DRAW_IMAGE = (WM_USER + 1),
 		WM_DRAW_HISTOGRAM,
-		WM_SET_BITMAP
+		WM_SET_BITMAP, 
+		WM_SET_NOVEBITMAP
 	};
 
 	CApplicationDlg(CWnd* pParent = NULL);	// standard constructor
@@ -71,6 +72,10 @@ protected:
 	std::vector<int> m_vHistBright;
 	std::vector<int> m_vHistGreen;
 	std::vector<int> m_vHistBlue;
+	std::vector<int> m_vnoveHistRed;
+	std::vector<int> m_vnoveHistBright;
+	std::vector<int> m_vnoveHistGreen;
+	std::vector<int> m_vnoveHistBlue;
 	std::atomic<std::thread::id> m_thread_id;
 	int m_pt;//pocet threadov
 	int m_pf;//pocet farieb
@@ -88,9 +93,11 @@ public:
 	afx_msg LRESULT OnDrawImage(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnSetNoveBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnDestroy();
 	afx_msg void single_tred(CString csFileName);
+	afx_msg void single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bitmap* &noveBitmap);
 	afx_msg void posterizuj();
 
 protected:

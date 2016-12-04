@@ -1,5 +1,6 @@
-//dorobit testy
-//prerobit funkciu onsetcursor
+
+//urobit inak prekreslovanie obrazku
+//sposterizuje sa iba prvych niekolko NECELYCH riadkov - zistit preco, opravit 
 
 // ApplicationDlg.cpp : implementation file
 //
@@ -30,7 +31,7 @@
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
+	void LoadAndCalc(Gdiplus::Bitmap* &pvBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
 	{
 		int r = 0;
 		int g = 0;
@@ -47,7 +48,9 @@ namespace
 		Gdiplus::Color *color;
 		color = new Gdiplus::Color(200, 255, 255, 255);
 		Gdiplus::BitmapData Bdata;
-		pBitmap = Gdiplus::Bitmap::FromFile(fileName);
+		Gdiplus::Bitmap* pBitmap;
+		//pBitmap = Gdiplus::Bitmap::FromFile(fileName);
+		pBitmap = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(),  PixelFormat32bppRGB);
 		int dlzka = pBitmap->GetHeight() / pt;
 
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
@@ -70,6 +73,53 @@ namespace
 		delete(color);
 		pBitmap->UnlockBits(&Bdata);
 	}
+
+	void poster(Gdiplus::Bitmap* &pBitmap, Gdiplus::Bitmap* &noveBitmap, int pf, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
+	{
+		Gdiplus::BitmapData pBdata;
+		Gdiplus::BitmapData noveBdata;
+		int dlzka = noveBitmap->GetHeight() / pt;
+
+		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
+		Gdiplus::Rect noverect(0, 0, noveBitmap->GetWidth(), noveBitmap->GetHeight());
+
+		noveBitmap->LockBits(&noverect, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, &noveBdata);
+		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &pBdata);
+
+		Utils::multi_thread_poster(pt, pf, dlzka, pBdata.Scan0, noveBdata.Scan0, 0, pBitmap->GetHeight(), pBdata.Stride,noveBdata.Stride, pBitmap->GetWidth(), fn);
+
+		pBitmap->UnlockBits(&pBdata);
+		noveBitmap->UnlockBits(&noveBdata);
+	}
+}
+
+void CApplicationDlg::single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bitmap* &noveBitmap)
+{
+//	int f;
+	std::vector<int> HistRed;
+	std::vector<int> HistBright;
+	std::vector<int> HistGreen;
+	std::vector<int> HistBlue;
+
+	Gdiplus::Bitmap *pBitmap2 = nullptr;
+	Gdiplus::Bitmap *noveBitmap2 = nullptr;
+	pBitmap2=pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(), PixelFormat32bppRGB);
+	noveBitmap2 = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(), PixelFormat32bppRGB);
+	std::thread::id a_tred = std::this_thread::get_id();
+	m_thread_id = a_tred;
+
+	poster(pBitmap2, noveBitmap2, m_pf, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
+	Utils::novehist(m_pf,m_vHistRed,m_vHistGreen,m_vHistBlue,m_vHistBright,HistRed,HistGreen,HistBlue,HistBright);
+
+	if (std::this_thread::get_id() == m_thread_id) {
+		std::tuple <Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(noveBitmap2, a_tred, HistRed, HistGreen, HistBlue, HistBright);
+		SendMessage(WM_SET_NOVEBITMAP, (WPARAM)&ntuple);
+	}
+	else
+	{
+		delete noveBitmap2;
+		delete pBitmap2;
+	}
 }
 
 void CApplicationDlg::posterizuj()
@@ -80,7 +130,9 @@ void CApplicationDlg::posterizuj()
 		m_noveBitmap = nullptr;
 	}
 
-	Gdiplus::BitmapData Bdata;
+	m_noveBitmap = m_pBitmap->Clone(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), PixelFormat32bppRGB);
+	single_tred_poster(m_pBitmap, m_noveBitmap);
+	/*Gdiplus::BitmapData Bdata;
 	Gdiplus::Rect rect(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight());
 	m_noveBitmap = m_pBitmap->Clone(rect, PixelFormat32bppRGB);
 	m_pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &Bdata);
@@ -101,6 +153,8 @@ void CApplicationDlg::posterizuj()
 		pLine = (uint32_t*)((uint8_t*)Bdata.Scan0 + Bdata.Stride*(y + 1));
 	}
 	m_pBitmap->UnlockBits(&Bdata);
+	*/
+	m_pocita = false;
 }
 
 
@@ -320,6 +374,7 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_MESSAGE(WM_DRAW_IMAGE, OnDrawImage)
 	ON_MESSAGE(WM_DRAW_HISTOGRAM, OnDrawHistogram)
 	ON_MESSAGE(WM_SET_BITMAP, OnSetBitmap)
+	ON_MESSAGE(WM_SET_NOVEBITMAP, OnSetNoveBitmap)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_FILE_LIST, OnLvnItemchangedFileList)
 	ON_COMMAND(ID_LOG_OPEN, OnLogOpen)
 	ON_UPDATE_COMMAND_UI(ID_LOG_OPEN, OnUpdateLogOpen)
@@ -369,15 +424,18 @@ END_MESSAGE_MAP()
 
 void CApplicationDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
-	if (abs(point.y - m_xy)<3)
-		::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_SIZENS));
-	else
-		::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
-	
-	if (nFlags == MK_LBUTTON)
+	if (m_xy)
 	{
-		m_xy = point.y;
-		m_ctrlImage.Invalidate();
+		if (abs(point.y - m_xy) < 5)
+			::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_SIZENS));
+		else
+			::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
+
+		if (nFlags == MK_LBUTTON)
+		{
+			m_xy = point.y;
+			m_ctrlImage.Invalidate();
+		}
 	}
 }
 
@@ -411,15 +469,15 @@ void CApplicationDlg::drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color 
 	double qwe = 0;
 	Gdiplus::Graphics g(DC);
 	Gdiplus::PointF bod[259];
-	bod[0] = Gdiplus::PointF(0, m_ptHistogram.y - max(0, log(vektor[0])) * scY);
+	bod[0] = Gdiplus::PointF(1, Gdiplus::REAL(m_ptHistogram.y - max(0, log(vektor[0])) * scY));
 
 	for (int i = 0; i < 256; i++)
 	{
-		bod[i + 1] = Gdiplus::PointF((i + 1)*scX, m_ptHistogram.y - max(0, log(vektor[i])) * scY);
+		bod[i + 1] = Gdiplus::PointF(Gdiplus::REAL(1+(i + 1)*scX), Gdiplus::REAL( m_ptHistogram.y - max(0, log(vektor[i])) * scY));
 	}
-	bod[257] = Gdiplus::PointF(257 * scX, m_ptHistogram.y);
-	bod[258] = Gdiplus::PointF(0, m_ptHistogram.y);
-	g.FillPolygon(&Gdiplus::SolidBrush(f), bod, 258);
+	bod[257] = Gdiplus::PointF(Gdiplus::REAL(257 * scX), Gdiplus::REAL( m_ptHistogram.y));
+	bod[258] = Gdiplus::PointF(1, Gdiplus::REAL( m_ptHistogram.y));
+	g.FillPolygon(&Gdiplus::SolidBrush(f), bod, 259);
 }
 
 
@@ -429,22 +487,45 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 	pDC->FillSolidRect(&(lpDI->rcItem), RGB(255, 255, 255));
 	int max=1;
-	if (m_vHistRed.size() != 0) {
+	if (m_vHistRed.size() != 0)
+	{
 		CRect rect(&(lpDI->rcItem));
-		for (int i=0;i<256;i++)
+		if (!m_zobrazene)
 		{
-			if (m_vHistRed[i]> max)max = m_vHistRed[i];
-			if (m_vHistGreen[i]> max)max = m_vHistGreen[i];
-			if (m_vHistBlue[i]> max)max = m_vHistBlue[i];
-			if (m_vHistBright[i]> max)max = m_vHistBright[i];
+			for (int i = 0; i < 256; i++)
+			{
+				if (m_vHistRed[i] > max)max = m_vHistRed[i];
+				if (m_vHistGreen[i] > max)max = m_vHistGreen[i];
+				if (m_vHistBlue[i] > max)max = m_vHistBlue[i];
+				if (m_vHistBright[i] > max)max = m_vHistBright[i];
+			}
+
+			double scalY = double(rect.Height()) / double(log(max));
+			double scalX = (rect.Width()-2) / 256.0;
+
+			if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150, 255, 0, 0), scalX, scalY);
+			if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150, 0, 255, 0), scalX, scalY);
+			if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150, 0, 0, 255), scalX, scalY);
+			if (m_bHistBright)drawrect(m_vHistBright, *pDC, Gdiplus::Color(150, 0, 0, 0), scalX, scalY);
 		}
-		
-		double scalY = double(rect.Height()) / double(log(max));
-		double scalX = rect.Width() / 257.0;
-		if (m_bHistRed)drawrect(m_vHistRed, *pDC, Gdiplus::Color(150,255,0,0), scalX, scalY);
-		if (m_bHistGreen)drawrect(m_vHistGreen, *pDC, Gdiplus::Color(150,0, 255, 0), scalX, scalY);
-		if (m_bHistBlue)drawrect(m_vHistBlue, *pDC, Gdiplus::Color(150,0, 0, 255), scalX, scalY);
-		if (m_bHistBright)drawrect(m_vHistBright, *pDC, Gdiplus::Color(150,0, 0, 0), scalX, scalY);
+		else
+		{
+			for (int i = 0; i < 256; i++)
+			{
+				if (m_vnoveHistRed[i] > max)max = m_vnoveHistRed[i];
+				if (m_vnoveHistGreen[i] > max)max = m_vnoveHistGreen[i];
+				if (m_vnoveHistBlue[i] > max)max = m_vnoveHistBlue[i];
+				if (m_vnoveHistBright[i] > max)max = m_vnoveHistBright[i];
+			}
+
+			double scalY = double(rect.Height()) / double(log(max));
+			double scalX = (rect.Width() - 2) / 260.0;
+
+			if (m_bHistRed)drawrect(m_vnoveHistRed, *pDC, Gdiplus::Color(150, 255, 0, 0), scalX, scalY);
+			if (m_bHistGreen)drawrect(m_vnoveHistGreen, *pDC, Gdiplus::Color(150, 0, 255, 0), scalX, scalY);
+			if (m_bHistBlue)drawrect(m_vnoveHistBlue, *pDC, Gdiplus::Color(150, 0, 0, 255), scalX, scalY);
+			if (m_bHistBright)drawrect(m_vnoveHistBright, *pDC, Gdiplus::Color(150, 0, 0, 0), scalX, scalY);
+		}
 	}
 
 	CBrush brBlack(RGB(0, 0, 0));
@@ -502,13 +583,13 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 		if (m_zc)
 		{
 			int stred = rct.top + (rct.Height() - nHeight) / 2 + nHeight / 2;
-			if (m_xy > stred + nHeight / 2) m_xy = stred + nHeight / 2;
-			if (m_xy < stred - nHeight / 2) m_xy = stred - nHeight / 2;
+			if (m_xy > stred + (int)nHeight / 2) m_xy = stred + nHeight / 2;
+			if (m_xy < stred - (int)nHeight / 2) m_xy = stred - nHeight / 2;
 
 			Gdiplus::Pen bp(Gdiplus::Color(255, 0, 0, 0), 3);
 			Gdiplus::Pen wp(Gdiplus::Color(255, 255, 255, 255), 1);
 			gr.DrawImage(m_noveBitmap, destRect);
-			gr.DrawImage(m_pBitmap->Clone(0,(m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight)), /*m_pBitmap->GetHeight()*/  PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
+			gr.DrawImage(m_pBitmap->Clone(0,int((m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight)),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-(int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight))), /*m_pBitmap->GetHeight()*/  PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
 			gr.DrawLine(&bp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
 			gr.DrawLine(&wp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
 		}
@@ -789,7 +870,7 @@ void CApplicationDlg::single_tred(CString csFileName)
 	Gdiplus::Bitmap *pBitmap = nullptr;
 	pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
 	std::thread::id a_tred = std::this_thread::get_id();
-	LoadAndCalc(csFileName, pBitmap, HistRed, HistGreen, HistBlue, HistBright, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
+	LoadAndCalc(pBitmap, HistRed, HistGreen, HistBlue, HistBright, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
 	if (std::this_thread::get_id() == m_thread_id) {
 		std::tuple <Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(pBitmap, a_tred, HistRed, HistGreen, HistBlue, HistBright);
 		SendMessage(WM_SET_BITMAP, (WPARAM)&ntuple);
@@ -983,6 +1064,22 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 	return TRUE;
 }
 
+LRESULT CApplicationDlg::OnSetNoveBitmap(WPARAM wParam, LPARAM lParam)
+{
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> *)(wParam);
+	if (std::get<1>(*ptuple) == m_thread_id) {
+		m_noveBitmap = std::get<0>(*ptuple);
+		m_vnoveHistRed = std::move(std::get<2>(*ptuple));
+		m_vnoveHistGreen = std::move(std::get<3>(*ptuple));
+		m_vnoveHistBlue = std::move(std::get<4>(*ptuple));
+		m_vnoveHistBright = std::move(std::get<5>(*ptuple));
+		m_ctrlImage.Invalidate();
+		m_ctrlHistogram.Invalidate();
+	}
+	m_pocita = false;
+	return TRUE;
+}
+
 void CApplicationDlg::OnThreads1()
 {
 	m_pt = 1;
@@ -1075,6 +1172,7 @@ void CApplicationDlg::OnEfektZobrazi32793()
 	m_zobrazene = !m_zobrazene;
 	m_zc = false;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
 
 
@@ -1091,6 +1189,7 @@ void CApplicationDlg::OnPostreization8farieb()
 	posterizuj();
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
 
 
@@ -1107,6 +1206,7 @@ void CApplicationDlg::OnPostreization16farie()
 	posterizuj();
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
 
 
@@ -1123,6 +1223,7 @@ void CApplicationDlg::OnPostreization512farieb()
 	posterizuj();
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
 
 
@@ -1139,6 +1240,7 @@ void CApplicationDlg::OnPostreization4096farieb()
 	posterizuj();
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 	// TODO: Add your command handler code here
 }
 
@@ -1155,6 +1257,7 @@ void CApplicationDlg::OnEfektX()
 	m_zobrazene = false;
 	m_zc = !m_zc;
 	m_ctrlImage.Invalidate();
+	m_ctrlHistogram.Invalidate();
 }
 
 

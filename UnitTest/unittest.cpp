@@ -37,14 +37,9 @@ namespace UnitTest
 	{
 		TEST_METHOD(TestHist)
 		{
-			int pt = 3;
+			int pt = 4;
 			int d = 256;
-		/*	std::vector<int> r, g, b, j;
-			r.assign(256, 0);
-			g.assign(256, 0);
-			b.assign(256, 0);
-			j.assign(256, 0);
-			*/
+
 			uint32_t pBitmap[256][256];
 			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
 			for (int x = 0; x < d; x++) {
@@ -58,8 +53,6 @@ namespace UnitTest
 			std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
 			std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
 			int dlzka = d / pt;
-			//				multi_thread(pt, dlzka, Bdata.Scan0, 0, pBitmap->GetHeight(), Bdata.Stride, pBitmap->GetWidth(), std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), m_thread_id);
-
 
 			multi_thread(pt, dlzka, pBitmap, 0, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
@@ -90,5 +83,110 @@ namespace UnitTest
 
 		}
 	
+	};
+
+	TEST_CLASS(TestEfekt)
+	{
+		TEST_METHOD(TestPoster_histogram)
+		{
+			int pt = 1;
+			int d = 256;
+			int pf = 128;
+			int r, g, b;
+			int dlzka = d / pt;
+
+			uint32_t pBitmap[256][256];
+			uint32_t noveBitmap[256][256];
+			uint32_t kontrolBitmap[256][256];
+
+			std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
+			
+			std::vector<int> red(d, 0);
+			std::vector<int> green(d, 0);
+			std::vector<int> blue(d, 0);
+			std::vector<int> jas(d, 0);
+
+			std::vector<int> novered(d, 0);
+			std::vector<int> novegreen(d, 0);
+			std::vector<int> noveblue(d, 0);
+			std::vector<int> novejas(d, 0);
+
+			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
+			memset(noveBitmap, 0, sizeof(uint32_t)*d*d);
+			memset(kontrolBitmap, 0, sizeof(uint32_t)*d*d);
+
+			for (int x = 0; x < d; x++) {
+				for (int y = 0; y < d; y++) {
+					pBitmap[x][y] = x * 256 * 256 + y * 256 + x;
+					r = max(0, min(255, (x / pf + 1)*pf));
+					g = max(0, min(255, (y / pf + 1)*pf));
+					b = max(0, min(255, (x / pf + 1)*pf));
+					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
+				}
+			}
+
+
+			multi_thread(pt, dlzka, kontrolBitmap, 0, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			
+			for (int j = 0; j<pt; j++)
+				for (int i = 0; i <= 255; i++)
+				{
+					red[i] += HistRed1[j][i];
+					green[i] += HistGreen1[j][i];
+					blue[i] += HistBlue1[j][i];
+					jas[i] += HistBright1[j][i];
+				}
+
+			novehist(pf, std::ref(red), std::ref(green), std::ref(blue), std::ref(jas), std::ref(novered), std::ref(novegreen), std::ref(noveblue), std::ref(novejas));
+
+			for (int i = 0; i < d; i++)
+			{
+				Assert::AreEqual(red[i], novered[i], L"poster_red");
+			}
+
+		};
+
+		TEST_METHOD(TestPoster)
+			{
+				int pt = 4;
+				int d = 256;
+				int pf = 128;
+				int r, g, b;
+
+				uint32_t pBitmap[256][256];
+				uint32_t noveBitmap[256][256];
+				uint32_t kontrolBitmap[256][256];
+				memset(pBitmap, 0, sizeof(uint32_t)*d*d);
+				memset(noveBitmap, 0, sizeof(uint32_t)*d*d);
+				memset(kontrolBitmap, 0, sizeof(uint32_t)*d*d);
+
+				for (int x = 0; x < d; x++) {
+					for (int y = 0; y < d; y++) {
+						pBitmap[x][y] = x * 256 * 256 + y * 256 + x;
+						r = max(0, min(255, (x / pf + 1)*pf));
+						g = max(0, min(255, (y / pf + 1)*pf));
+						b = max(0, min(255, (x / pf + 1)*pf));
+						kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
+					}
+				}
+
+				int dlzka = d / pt;
+
+				multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, d, d, d, [d]() {return false; });
+
+				for (int x = 0; x < d; x++)
+				{
+					for (int y = 0; y < d; y++)
+					{
+						Assert::AreEqual(noveBitmap[x][y], kontrolBitmap[x][y], L"posterizacia");
+					}
+				}
+
+
+		}
+
 	};
 }
