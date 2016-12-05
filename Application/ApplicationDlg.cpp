@@ -1,6 +1,6 @@
-
-//urobit inak prekreslovanie obrazku
 //sposterizuje sa iba prvych niekolko NECELYCH riadkov - zistit preco, opravit 
+	//moze byt stride < sirka obrazka?
+	// v testoch sa funkcia multi_thread_poster vola 2krat, pricom 2.krat so zlym stride. aj ked zadam stride ako cislo, do funkcie vojde 0
 
 // ApplicationDlg.cpp : implementation file
 //
@@ -74,7 +74,7 @@ namespace
 		pBitmap->UnlockBits(&Bdata);
 	}
 
-	void poster(Gdiplus::Bitmap* &pBitmap, Gdiplus::Bitmap* &noveBitmap, int pf, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
+	void poster(Gdiplus::Bitmap* &pBitmap, Gdiplus::Bitmap* &noveBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pf, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
 	{
 		Gdiplus::BitmapData pBdata;
 		Gdiplus::BitmapData noveBdata;
@@ -82,11 +82,24 @@ namespace
 
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		Gdiplus::Rect noverect(0, 0, noveBitmap->GetWidth(), noveBitmap->GetHeight());
+		std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
 
 		noveBitmap->LockBits(&noverect, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, &noveBdata);
 		pBitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, &pBdata);
 
-		Utils::multi_thread_poster(pt, pf, dlzka, pBdata.Scan0, noveBdata.Scan0, 0, pBitmap->GetHeight(), pBdata.Stride,noveBdata.Stride, pBitmap->GetWidth(), fn);
+		Utils::multi_thread_poster(pt, pf, dlzka, pBdata.Scan0, noveBdata.Scan0, 0, pBitmap->GetHeight(), pBdata.Stride,noveBdata.Stride, pBitmap->GetWidth(), std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), fn);
+
+		for (int j = 0; j<pt; j++)
+			for (int i = 0; i <= 255; i++)
+			{
+				red[i] += HistRed1[j][i];
+				green[i] += HistGreen1[j][i];
+				blue[i] += HistBlue1[j][i];
+				jas[i] += HistBright1[j][i];
+			}
 
 		pBitmap->UnlockBits(&pBdata);
 		noveBitmap->UnlockBits(&noveBdata);
@@ -103,14 +116,19 @@ void CApplicationDlg::single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bi
 
 	Gdiplus::Bitmap *pBitmap2 = nullptr;
 	Gdiplus::Bitmap *noveBitmap2 = nullptr;
+	
+	HistRed.assign(256, 0);
+	HistBright.assign(256, 0);
+	HistGreen.assign(256, 0);
+	HistBlue.assign(256, 0);
+
 	pBitmap2=pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(), PixelFormat32bppRGB);
 	noveBitmap2 = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(), PixelFormat32bppRGB);
 	std::thread::id a_tred = std::this_thread::get_id();
 	m_thread_id = a_tred;
 
-	poster(pBitmap2, noveBitmap2, m_pf, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
-	Utils::novehist(m_pf,m_vHistRed,m_vHistGreen,m_vHistBlue,m_vHistBright,HistRed,HistGreen,HistBlue,HistBright);
-
+	poster(pBitmap2, noveBitmap2, HistRed, HistGreen, HistBlue, HistBright, m_pf, m_pt, m_thread_id, [this, a_tred]() {return m_thread_id != a_tred; });
+	
 	if (std::this_thread::get_id() == m_thread_id) {
 		std::tuple <Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(noveBitmap2, a_tred, HistRed, HistGreen, HistBlue, HistBright);
 		SendMessage(WM_SET_NOVEBITMAP, (WPARAM)&ntuple);
@@ -486,6 +504,15 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 	pDC->FillSolidRect(&(lpDI->rcItem), RGB(255, 255, 255));
+
+	if (m_xy) 
+	{
+		CBrush brBlack(RGB(0, 0, 0));
+		pDC->FrameRect(&(lpDI->rcItem), &brBlack);
+
+		return S_OK;
+	}
+
 	int max=1;
 	if (m_vHistRed.size() != 0)
 	{
@@ -588,8 +615,9 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 
 			Gdiplus::Pen bp(Gdiplus::Color(255, 0, 0, 0), 3);
 			Gdiplus::Pen wp(Gdiplus::Color(255, 255, 255, 255), 1);
-			gr.DrawImage(m_noveBitmap, destRect);
-			gr.DrawImage(m_pBitmap->Clone(0,int((m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight)),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-(int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight))), /*m_pBitmap->GetHeight()*/  PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
+			//gr.DrawImage(m_noveBitmap, destRect);
+			gr.DrawImage(m_noveBitmap->Clone(0,0,m_noveBitmap->GetWidth(), (int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() / (double)nHeight))),PixelFormat32bppRGB), destRect.X,destRect.Y,destRect.Width, stred - (nHeight / 2) + m_xy);
+			gr.DrawImage(m_pBitmap->Clone(0,int((m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight)),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-(int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight))), PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
 			gr.DrawLine(&bp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
 			gr.DrawLine(&wp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
 		}

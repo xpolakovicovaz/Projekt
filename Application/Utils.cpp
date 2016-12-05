@@ -84,7 +84,7 @@ namespace Utils
 		}
 	}
 
-	void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::function<bool()> fn)
+	void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 	{
 		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
 		uint32_t *noveLine = (uint32_t*)((uint8_t*)novescan0 + novestride*(zaciatok));
@@ -104,6 +104,11 @@ namespace Utils
 
 				*noveLine = ((r << 16) & 0xff0000 | (g << 8) & 0xff00 | (b) & 0xff);
 				
+				red[r]++;
+				green[g]++;
+				blue[b]++;
+				jas[(int)(0.2126*r + 0.7152*g + 0.0722*b)]++;
+
 				pLine++;
 				noveLine++;
 			}
@@ -115,14 +120,14 @@ namespace Utils
 		return;
 	}
 
-	void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::function<bool()> fn)
+	void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
 	{
 		std::vector<std::thread> tred(pt);
 		for (int i = 0; i < pt - 1; i++)
 		{
-			tred[i] = std::thread(&Utils::posterizuj, pf, scan0, novescan0, i*dlzka, (i + 1)*dlzka, stride,novestride, s, fn);
+			tred[i] = std::thread(&Utils::posterizuj, pf, scan0, novescan0, i*dlzka, (i + 1)*dlzka, stride,novestride, s, std::ref(red[i]), std::ref(green[i]), std::ref(blue[i]), std::ref(jas[i]), fn);
 		}
-		Utils::posterizuj(pf, scan0, novescan0,(pt - 1)*dlzka, koniec, stride, novestride, s, fn);
+		Utils::posterizuj(pf, scan0, novescan0,(pt - 1)*dlzka, koniec, stride, novestride, s, std::ref(red[pt-1]), std::ref(green[pt-1]), std::ref(blue[pt-1]), std::ref(jas[pt-1]), fn);
 		
 		for (int i = 0; i < pt - 1; i++)
 		{
@@ -130,32 +135,4 @@ namespace Utils
 		}		
 	}
 
-	void novehist(int pf, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::vector<int> &novered, std::vector<int> &novegreen, std::vector<int> &noveblue, std::vector<int> &novejas)
-	{
-		int f;
-		int qwe = 1;
-		novered.clear();
-		novegreen.clear();
-		noveblue.clear();
-		novejas.clear();
-		novered.assign(256, 0);
-		novegreen.assign(256, 0);
-		noveblue.assign(256, 0);
-		novejas.assign(256, 0);
-
-		for (int i = 0; i < 256; i++)
-		{
-			f = min(qwe*pf, 255);
-			while (i <= f)
-			{
-				novered[f] += red[i];
-				novegreen[f] += green[i];
-				noveblue[f] += blue[i];
-				novejas[f] += jas[i];
-				i++;
-			}
-			qwe++;
-		}
-		return;
-	}
 }
