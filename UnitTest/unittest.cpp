@@ -91,7 +91,7 @@ namespace UnitTest
 		{
 			int pt = 1;
 			int d = 256;
-			int pf = 128;
+			int pf = 256;
 			int r, g, b;
 
 			std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
@@ -113,22 +113,22 @@ namespace UnitTest
 			uint32_t noveBitmap[256][256];
 			uint32_t kontrolBitmap[256][256];
 			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
-			memset(noveBitmap, 0, sizeof(uint32_t)*d*d);
-			memset(kontrolBitmap, 0, sizeof(uint32_t)*d*d);
+			memset(noveBitmap, 1, sizeof(uint32_t)*d*d);
+			memset(kontrolBitmap, 1, sizeof(uint32_t)*d*d);
 
 			for (int x = 0; x < d; x++) {
 				for (int y = 0; y < d; y++) {
 					pBitmap[x][y] = x * 256 * 256 + y * 256 + x;
-					r = max(0, min(255, (x / pf + 1)*pf));
-					g = max(0, min(255, (y / pf + 1)*pf));
-					b = max(0, min(255, (x / pf + 1)*pf));
+					r = min(round(x / (double)pf)*pf, 255);
+					g = min(round(y / (double)pf)*pf, 255);
+					b = min(round(x / (double)pf)*pf, 255);
 					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
 				}
 			}
 
 			int dlzka = d / pt;
 
-			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, (BYTE)256, (BYTE)256, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
 			for (int x = 0; x < d; x++)
 			{

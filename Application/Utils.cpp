@@ -44,7 +44,7 @@ namespace Utils
 
 	}
 
-	void CalcHistogram(void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
+	void CalcHistogram(void* scan0, int zaciatok, int koniec, int stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 	{
 		int r, g, b;
 		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
@@ -69,7 +69,7 @@ namespace Utils
 		return;
 	}
 
-	void multi_thread(int pt, int dlzka, void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
+	void multi_thread(int pt, int dlzka, void* scan0, int zaciatok, int koniec, int stride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
 	{
 		std::vector<std::thread> tred(pt);
 		for (int i = 0; i < pt - 1; i++)
@@ -84,7 +84,7 @@ namespace Utils
 		}
 	}
 
-	void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
+	void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, int stride, int novestride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 	{
 		uint32_t *pLine = (uint32_t*)((uint8_t*)scan0 + stride*(zaciatok));
 		uint32_t *noveLine = (uint32_t*)((uint8_t*)novescan0 + novestride*(zaciatok));
@@ -98,9 +98,9 @@ namespace Utils
 				g = ((*pLine) >> 8) & 0xff;
 				b = (int)(*pLine) & 0xff;
 
-				r = max(0, min(255, (r / pf + 1)*pf));
-				g = max(0, min(255, (g / pf + 1)*pf));
-				b = max(0, min(255, (b / pf + 1)*pf));
+				r = min(round( r / (double)pf)*pf,255);
+				g = min(round( g / (double)pf)*pf, 255);
+				b = min(round( b / (double)pf)*pf, 255);
 
 				*noveLine = ((r << 16) & 0xff0000 | (g << 8) & 0xff00 | (b) & 0xff);
 				
@@ -120,7 +120,7 @@ namespace Utils
 		return;
 	}
 
-	void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
+	void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, int stride, int novestride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
 	{
 		std::vector<std::thread> tred(pt);
 		for (int i = 0; i < pt - 1; i++)

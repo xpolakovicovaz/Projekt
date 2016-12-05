@@ -159,4 +159,6 @@ public:
 	afx_msg void OnUpdatePostreization4096farieb(CCmdUI *pCmdUI);
 	afx_msg void OnEfektX();
 	afx_msg void OnUpdateEfektX(CCmdUI *pCmdUI);
+	afx_msg void OnPosterizacia4913farieb();
+	afx_msg void OnUpdatePosterizacia4913farieb(CCmdUI *pCmdUI);
 };

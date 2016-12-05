@@ -43,13 +43,14 @@
 #define ID_POSTREIZATION_512FARIEB      32797
 #define ID_POSTREIZATION_4096FARIEB     32798
 #define ID_POSTREIZATION_32FARIE        32799
+#define ID_POSTERIZACIA_4913FARIEB      32800
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        133
-#define _APS_NEXT_COMMAND_VALUE         32800
+#define _APS_NEXT_COMMAND_VALUE         32801
 #define _APS_NEXT_CONTROL_VALUE         1004
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

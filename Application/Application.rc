@@ -156,9 +156,10 @@ BEGIN
         POPUP "Posterizacia"
         BEGIN
             MENUITEM "8 farieb",                    ID_POSTREIZATION_8FARIEB
-            MENUITEM "32 farieb",                   ID_POSTREIZATION_16FARIE
-            MENUITEM "512 farieb",                  ID_POSTREIZATION_512FARIEB
-            MENUITEM "4096 farieb",                 ID_POSTREIZATION_4096FARIEB
+            MENUITEM "27 farieb",                   ID_POSTREIZATION_16FARIE
+            MENUITEM "125 farieb",                  ID_POSTREIZATION_512FARIEB
+            MENUITEM "512 farieb",                  ID_POSTREIZATION_4096FARIEB
+            MENUITEM "4913 farieb",                 ID_POSTERIZACIA_4913FARIEB
         END
         MENUITEM SEPARATOR
         MENUITEM "Zobraziù",                    ID_EFEKT_ZOBRAZI32793

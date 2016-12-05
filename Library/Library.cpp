@@ -32,22 +32,22 @@ LIBRARY_API std::pair< CString, std::vector<CString> > ParseFiles(LPCTSTR lpstrF
 	return Utils::ParseFiles(lpstrFile);
 }
 
-LIBRARY_API void CalcHistogram(void* scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
+LIBRARY_API void CalcHistogram(void* scan0, int zaciatok, int koniec, int stride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 {
 	return Utils::CalcHistogram(scan0, zaciatok, koniec, stride, s, red, green, blue, jas, fn);
 }
 
-LIBRARY_API void multi_thread(int pt, int dlzka, void * scan0, int zaciatok, int koniec, BYTE stride, int s, std::vector<std::vector<int>>& red, std::vector<std::vector<int>>& green, std::vector<std::vector<int>>& blue, std::vector<std::vector<int>>& jas, std::function<bool()> fn)
+LIBRARY_API void multi_thread(int pt, int dlzka, void * scan0, int zaciatok, int koniec, int stride, int s, std::vector<std::vector<int>>& red, std::vector<std::vector<int>>& green, std::vector<std::vector<int>>& blue, std::vector<std::vector<int>>& jas, std::function<bool()> fn)
 {
 	return Utils::multi_thread(pt, dlzka, scan0, zaciatok, koniec, stride, s, std::ref(red), std::ref(green), std::ref(blue), std::ref(jas), fn);
 }
 
-LIBRARY_API void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
+LIBRARY_API void multi_thread_poster(int pt, int pf, int dlzka, void* scan0, void* novescan0, int zaciatok, int koniec, int stride, int novestride, int s, std::vector<std::vector<int>> &red, std::vector<std::vector<int>> &green, std::vector<std::vector<int>> &blue, std::vector<std::vector<int>> &jas, std::function<bool()> fn)
 {
 	return Utils::multi_thread_poster(pt, pf, dlzka, scan0, novescan0, zaciatok, koniec, stride, novestride, s,red, green, blue,jas, fn);
 }
 
-LIBRARY_API void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, BYTE stride, BYTE novestride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
+LIBRARY_API void posterizuj(int pf, void* scan0, void* novescan0, int zaciatok, int koniec, int stride, int novestride, int s, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, std::function<bool()> fn)
 {
 	return Utils::posterizuj(pf, scan0, novescan0, zaciatok, koniec, stride, novestride, s,red, green, blue, jas, fn);
 }
