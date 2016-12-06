@@ -98,9 +98,9 @@ namespace Utils
 				g = ((*pLine) >> 8) & 0xff;
 				b = (int)(*pLine) & 0xff;
 
-				r = min(round( r / (double)pf)*pf,255);
-				g = min(round( g / (double)pf)*pf, 255);
-				b = min(round( b / (double)pf)*pf, 255);
+				r = (int)min(round( r / (double)pf)*pf,255);
+				g = (int)min(round( g / (double)pf)*pf, 255);
+				b = (int)min(round( b / (double)pf)*pf, 255);
 
 				*noveLine = ((r << 16) & 0xff0000 | (g << 8) & 0xff00 | (b) & 0xff);
 				
@@ -127,9 +127,9 @@ namespace Utils
 		{
 			tred[i] = std::thread(&Utils::posterizuj, pf, scan0, novescan0, i*dlzka, (i + 1)*dlzka, stride,novestride, s, std::ref(red[i]), std::ref(green[i]), std::ref(blue[i]), std::ref(jas[i]), fn);
 		}
-		Utils::posterizuj(pf, scan0, novescan0,(pt - 1)*dlzka, koniec, stride, novestride, s, std::ref(red[pt-1]), std::ref(green[pt-1]), std::ref(blue[pt-1]), std::ref(jas[pt-1]), fn);
+		tred[pt-1] = std::thread(&Utils::posterizuj,pf, scan0, novescan0,(pt - 1)*dlzka, koniec, stride, novestride, s, std::ref(red[pt-1]), std::ref(green[pt-1]), std::ref(blue[pt-1]), std::ref(jas[pt-1]), fn);
 		
-		for (int i = 0; i < pt - 1; i++)
+		for (int i = 0; i < pt ; i++)
 		{
 			tred[i].join();
 		}		

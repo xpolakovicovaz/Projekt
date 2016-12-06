@@ -1,4 +1,5 @@
-//opravit testy
+//OPRAVIT TESTY 
+//efekt mrzne
 
 // ApplicationDlg.cpp : implementation file
 //
@@ -47,7 +48,6 @@ namespace
 		color = new Gdiplus::Color(200, 255, 255, 255);
 		Gdiplus::BitmapData Bdata;
 		Gdiplus::Bitmap* pBitmap;
-		//pBitmap = Gdiplus::Bitmap::FromFile(fileName);
 		pBitmap = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(),  PixelFormat32bppRGB);
 		int dlzka = pBitmap->GetHeight() / pt;
 
@@ -106,7 +106,6 @@ namespace
 
 void CApplicationDlg::single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bitmap* &noveBitmap)
 {
-//	int f;
 	std::vector<int> HistRed;
 	std::vector<int> HistBright;
 	std::vector<int> HistGreen;
@@ -145,7 +144,7 @@ void CApplicationDlg::posterizuj()
 		delete m_noveBitmap;
 		m_noveBitmap = nullptr;
 	}
-
+	m_pocita = true;
 	m_noveBitmap = m_pBitmap->Clone(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), PixelFormat32bppRGB);
 	single_tred_poster(m_pBitmap, m_noveBitmap);
 
@@ -765,7 +764,7 @@ void CApplicationDlg::OnPaint()
 	}
 }
 
-// The system calls this function to obtain the cursor to display while the user drags
+// The system calls this function to botain the cursor to display while the user drags
 //  the minimized window.
 HCURSOR CApplicationDlg::OnQueryDragIcon()
 {
@@ -882,18 +881,32 @@ void CApplicationDlg::OnUpdateFileClose(CCmdUI *pCmdUI)
 
 LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 {
-	CMenu* pMainMenu = GetMenu();
+	// stack for menu
+	std::vector<CMenu*> menus{ GetMenu() };    //starting with main menu
 	CCmdUI cmdUI;
-	for (UINT n = 0; n < (UINT)pMainMenu->GetMenuItemCount(); ++n)
+	while (!menus.empty())
 	{
-		CMenu* pSubMenu = pMainMenu->GetSubMenu(n);
-		cmdUI.m_nIndexMax = pSubMenu->GetMenuItemCount();
-		for (UINT i = 0; i < cmdUI.m_nIndexMax; ++i)
+		// pop menu from stack
+		CMenu * pMenu = menus.back();
+		menus.pop_back();
+		cmdUI.m_nIndexMax = pMenu->GetMenuItemCount();
+		// "recursively" crawl submenus / items
+		for (int i = 0; i < pMenu->GetMenuItemCount(); ++i)
 		{
-			cmdUI.m_nIndex = i;
-			cmdUI.m_nID = pSubMenu->GetMenuItemID(i);
-			cmdUI.m_pMenu = pSubMenu;
-			cmdUI.DoUpdate(this, FALSE);
+			cmdUI.m_nID = pMenu->GetMenuItemID(i);
+			if (cmdUI.m_nID == (UINT)-1)
+			{
+				CMenu* pSubMenu = pMenu->GetSubMenu(i);
+				if (pSubMenu)
+					menus.push_back(pSubMenu);       // submenu - push to stack
+			}
+			else
+			{
+				// call OnUpdate... handler for menu item
+				cmdUI.m_nIndex = i;
+				cmdUI.m_pMenu = pMenu;
+				cmdUI.DoUpdate(this, FALSE);
+			}
 		}
 	}
 	return TRUE;
@@ -936,6 +949,8 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	}
 
 	*pResult = 0;
+	m_pf = 0;
+	m_pocita = false;
 	m_zobrazene = false;
 	m_xy = -10;
 	m_zc = false;
@@ -972,6 +987,7 @@ void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
 	pCmdUI->SetCheck(m_bHistRed);
+	pCmdUI->Enable(!m_zc);
 }
 
 
@@ -992,7 +1008,7 @@ void CApplicationDlg::OnUpdateHistogramBright(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(m_pBitmap != NULL);
 	pCmdUI->SetCheck(m_bHistBright);
-
+	pCmdUI->Enable(!m_zc);
 }
 
 
@@ -1006,13 +1022,14 @@ void CApplicationDlg::OnUpdateHistogramBlue(CCmdUI *pCmdUI)
 {
 	pCmdUI->SetCheck(m_bHistBlue);
 	pCmdUI->Enable(m_pBitmap != NULL);
+	pCmdUI->Enable(!m_zc);
 }
 
 void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
 {
 	pCmdUI->SetCheck(m_bHistGreen);
 	pCmdUI->Enable(m_pBitmap != NULL);
-
+	pCmdUI->Enable(!m_zc);
 }
 
 void CApplicationDlg::OnHistogramGreen()

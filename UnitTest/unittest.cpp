@@ -80,9 +80,7 @@ namespace UnitTest
 				if (i != 0) Assert::AreEqual(HistBlue1[pt - 1][i], 0, L"modry0posledny");
 				if (i != (int)(0.2126 * 255 + 0.7152 * 88 + 0.0722 * 0))Assert::AreEqual(HistBright1[pt - 1][i], 0, L"jas0");
 			}
-
 		}
-
 	};
 
 	TEST_CLASS(TestEfekt)
@@ -118,10 +116,10 @@ namespace UnitTest
 
 			for (int x = 0; x < d; x++) {
 				for (int y = 0; y < d; y++) {
-					pBitmap[x][y] = x * 256 * 256 + y * 256 + x;
-					r = min(round(x / (double)pf)*pf, 255);
-					g = min(round(y / (double)pf)*pf, 255);
-					b = min(round(x / (double)pf)*pf, 255);
+					pBitmap[x][y] = 255 * 256 * 256 + 255 * 256 + 255;
+					r = 255;//(int)min(round(x / (double)pf)*pf, 255);
+					g = 255;// (int)min(round(y / (double)pf)*pf, 255);
+					b = 255;// (int)min(round(x / (double)pf)*pf, 255);
 					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
 				}
 			}
