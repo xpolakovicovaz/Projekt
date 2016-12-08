@@ -1,4 +1,3 @@
-//nefunguje test na jas - pre vsetkych ciernych pixeloch ma 6 pixelov iny jas
 //kedy mam vymazat bitmapy z single_tred(pBitmap) a singl_tred_poster(noveBitmap2 a pBitmap2)
 //odstranoit bitmapy z hora
 
@@ -144,6 +143,9 @@ void CApplicationDlg::posterizuj()
 		delete m_noveBitmap;
 		m_noveBitmap = nullptr;
 	}
+	m_zobrazene = true;
+	m_xy = -10;
+	m_zc = false;
 	m_pocita = true;
 	m_noveBitmap = m_pBitmap->Clone(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), PixelFormat32bppRGB);
 	single_tred_poster(m_pBitmap, m_noveBitmap);
@@ -529,6 +531,8 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 
 LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 {
+	m_pocita = false;
+
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 
@@ -950,7 +954,7 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	*pResult = 0;
 	m_pf = 0;
-	m_pocita = false;
+	//m_pocita = false;
 	m_zobrazene = false;
 	m_xy = -10;
 	m_zc = false;
@@ -1050,7 +1054,7 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 	}
-	m_pocita = false;
+	//m_pocita = false;
 	return TRUE;
 }
 
@@ -1066,7 +1070,7 @@ LRESULT CApplicationDlg::OnSetNoveBitmap(WPARAM wParam, LPARAM lParam)
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 	}
-	m_pocita = false;
+	//m_pocita = false;
 	return TRUE;
 }
 

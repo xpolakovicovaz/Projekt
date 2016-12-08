@@ -87,9 +87,9 @@ namespace UnitTest
 	{
 		TEST_METHOD(TestPoster)
 		{
-			int pt = 1;
+			int pt = 8;
 			int d = 256;
-			int pf = 256;
+			int pf = 64;
 			int r, g, b;
 
 			std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
@@ -116,17 +116,17 @@ namespace UnitTest
 
 			for (int x = 0; x < d; x++) {
 				for (int y = 0; y < d; y++) {
-					pBitmap[x][y] = 256*256*256-1;//x * 256 * 256 + y * 256 + x;
-					r = 255;// (int)min(round(x / (double)pf)*pf, 255);
-					g = 255;// (int)min(round(y / (double)pf)*pf, 255);
-					b = 255;// (int)min(round(x / (double)pf)*pf, 255);
+					pBitmap[x][y] =x * 256 * 256 + y * 256 + x;
+					r =  (int)min(round(x / (double)pf)*pf, 255);
+					g =  (int)min(round(y / (double)pf)*pf, 255);
+					b =  (int)min(round(x / (double)pf)*pf, 255);
 					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
 				}
 			}
 
 			int dlzka = d / pt;
 
-			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, d, 4*d, 4*d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, 4*d, 4*d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
 			for (int x = 0; x < d; x++)
 			{
@@ -158,7 +158,7 @@ namespace UnitTest
 				}
 			}
 
-			multi_thread(pt, dlzka, kontrolBitmap, 0, d, 4*d, 4*d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			multi_thread(pt, dlzka, kontrolBitmap, 0, d, 4*d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
 			for (int j = 0; j < pt; j++)
 			{
@@ -169,7 +169,6 @@ namespace UnitTest
 					noveblue[i] += HistBlue1[j][i];
 					novejas[i] += HistBright1[j][i];
 				}
-
 			}
 
 			for (int i = 0; i < d; i++)
@@ -179,7 +178,6 @@ namespace UnitTest
 				Assert::AreEqual(blue[i], noveblue[i], L"histogram_poster_blue");
 				Assert::AreEqual(jas[i], novejas[i], L"histogram_poster_jas");
 			}
-
 		}
 
 	};
