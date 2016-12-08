@@ -111,13 +111,13 @@ namespace UnitTest
 			uint32_t noveBitmap[256][256];
 			uint32_t kontrolBitmap[256][256];
 			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
-			memset(noveBitmap, 1, sizeof(uint32_t)*d*d);
-			memset(kontrolBitmap, 1, sizeof(uint32_t)*d*d);
+			memset(noveBitmap, 2555, sizeof(uint32_t)*d*d);
+			memset(kontrolBitmap, 0, sizeof(uint32_t)*d*d);
 
 			for (int x = 0; x < d; x++) {
 				for (int y = 0; y < d; y++) {
-					pBitmap[x][y] = 255 * 256 * 256 + 255 * 256 + 255;
-					r = 255;//(int)min(round(x / (double)pf)*pf, 255);
+					pBitmap[x][y] = 256*256*256-1;//x * 256 * 256 + y * 256 + x;
+					r = 255;// (int)min(round(x / (double)pf)*pf, 255);
 					g = 255;// (int)min(round(y / (double)pf)*pf, 255);
 					b = 255;// (int)min(round(x / (double)pf)*pf, 255);
 					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
@@ -126,7 +126,7 @@ namespace UnitTest
 
 			int dlzka = d / pt;
 
-			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, d, 4*d, 4*d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
 			for (int x = 0; x < d; x++)
 			{
@@ -158,7 +158,7 @@ namespace UnitTest
 				}
 			}
 
-			multi_thread(pt, dlzka, kontrolBitmap, 0, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+			multi_thread(pt, dlzka, kontrolBitmap, 0, d, 4*d, 4*d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
 
 			for (int j = 0; j < pt; j++)
 			{
@@ -174,10 +174,10 @@ namespace UnitTest
 
 			for (int i = 0; i < d; i++)
 			{
-				Assert::AreEqual(red[i], novered[i], L"poster_red");
-				Assert::AreEqual(green[i], novegreen[i], L"poster_green");
-				Assert::AreEqual(blue[i], noveblue[i], L"poster_blue");
-				Assert::AreEqual(jas[i], novejas[i], L"poster_jas");
+				Assert::AreEqual(red[i], novered[i], L"histogram_poster_red");
+				Assert::AreEqual(green[i], novegreen[i], L"histogram_poster_green");
+				Assert::AreEqual(blue[i], noveblue[i], L"histogram_poster_blue");
+				Assert::AreEqual(jas[i], novejas[i], L"histogram_poster_jas");
 			}
 
 		}

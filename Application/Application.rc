@@ -162,7 +162,7 @@ BEGIN
             MENUITEM "4913 farieb",                 ID_POSTERIZACIA_4913FARIEB
         END
         MENUITEM SEPARATOR
-        MENUITEM "Zobraziù",                    ID_EFEKT_ZOBRAZI32793
+        MENUITEM "Zobraziù efekt",              ID_EFEKT_ZOBRAZI32793
         MENUITEM "x/y",                         ID_EFEKT_X
     END
 END

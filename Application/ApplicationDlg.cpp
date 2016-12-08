@@ -1,5 +1,6 @@
-//OPRAVIT TESTY 
-//efekt mrzne
+//nefunguje test na jas - pre vsetkych ciernych pixeloch ma 6 pixelov iny jas
+//kedy mam vymazat bitmapy z single_tred(pBitmap) a singl_tred_poster(noveBitmap2 a pBitmap2)
+//odstranoit bitmapy z hora
 
 // ApplicationDlg.cpp : implementation file
 //
@@ -81,8 +82,7 @@ namespace
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		Gdiplus::Rect noverect(0, 0, noveBitmap->GetWidth(), noveBitmap->GetHeight());
 		std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
-		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
-		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
 		std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
 
 		noveBitmap->LockBits(&noverect, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, &noveBdata);
@@ -420,7 +420,7 @@ END_MESSAGE_MAP()
 
 void CApplicationDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
-	if (m_xy)
+	if (m_zc)
 	{
 		if (abs(point.y - m_xy) < 5)
 			::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_SIZENS));
