@@ -33,11 +33,55 @@ namespace UnitTest
 		}
 	};
 
+
 	TEST_CLASS(TestHistogram)
 	{
+		bool hist_thready(int pt)
+		{
+			int d = 256;
+
+			uint32_t pBitmap[256][256];
+			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
+			for (int x = 0; x < d; x++) {
+				for (int y = 0; y < d; y++) {
+					pBitmap[x][y] = 16734208;// 0xff8800;
+				}
+			}
+
+			std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
+			int dlzka = d / pt;
+
+			multi_thread(pt, dlzka, pBitmap, 0, d, d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+
+			for (int qwe = 0; qwe < pt - 1; qwe++) {
+				if (HistRed1[qwe][255] != dlzka*d) return false;
+				if (HistGreen1[qwe][88] != dlzka*d) return false;
+				if (HistBlue1[qwe][0] != dlzka*d) return false;
+				for (int i = 0; i < 256; i++)
+				{
+					if (i != 255)if (HistRed1[qwe][i] != 0) return false;
+					if (i != 88) if (HistGreen1[qwe][i] != 0) return false;
+					if (i != 0) if (HistBlue1[qwe][i] != 0) return false;
+				}
+			}
+			if (HistRed1[pt - 1][255] != d*(d - (pt - 1)*dlzka))return false;
+			if (HistGreen1[pt - 1][88] != d*(d - (pt - 1)*dlzka))return false;
+			if (HistBlue1[pt - 1][0] != d*(d - (pt - 1)*dlzka))return false;
+			for (int i = 0; i < 256; i++)
+			{
+				if (i != 255) if (HistRed1[pt - 1][i] != 0)return false;
+				if (i != 88) if (HistGreen1[pt - 1][i] != 0)return false;
+				if (i != 0) if (HistBlue1[pt - 1][i] != 0)return false;
+			}
+			return true;
+		}
+
 		TEST_METHOD(TestHist)
 		{
-			int pt = 4;
+			int pt = 2;
 			int d = 256;
 
 			uint32_t pBitmap[256][256];
@@ -81,13 +125,23 @@ namespace UnitTest
 				if (i != (int)(0.2126 * 255 + 0.7152 * 88 + 0.0722 * 0))Assert::AreEqual(HistBright1[pt - 1][i], 0, L"jas0");
 			}
 		}
+
+		TEST_METHOD(TestHist_tredy)
+		{
+			Assert::AreEqual(hist_thready(1), true, L"1thread");
+			Assert::AreEqual(hist_thready(2), true, L"2thready");
+			Assert::AreEqual(hist_thready(4), true, L"4thready");
+			Assert::AreEqual(hist_thready(8), true, L"8threadov");
+			Assert::AreEqual(hist_thready(12), true, L"8threadov");
+			Assert::AreEqual(hist_thready(16), true, L"16threadov");
+		}
 	};
 
 	TEST_CLASS(TestEfekt)
 	{
 		TEST_METHOD(TestPoster)
 		{
-			int pt = 8;
+			int pt = 1;
 			int d = 256;
 			int pf = 64;
 			int r, g, b;
@@ -180,5 +234,6 @@ namespace UnitTest
 			}
 		}
 
+		
 	};
 }
