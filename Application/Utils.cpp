@@ -103,7 +103,6 @@ namespace Utils
 				b = (int)min(round( b / (double)pf)*pf, 255);
 
 				*noveLine = ((r << 16) & 0xff0000 | (g << 8) & 0xff00 | (b) & 0xff);
-				//*noveLine = ((0 << 16) & 0xff0000 | (0 << 8) & 0xff00 | (0) & 0xff);
 				
 				red[r]++;
 				green[g]++;

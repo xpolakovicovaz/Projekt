@@ -128,12 +128,11 @@ namespace UnitTest
 
 		TEST_METHOD(TestHist_tredy)
 		{
-			Assert::AreEqual(hist_thready(1), true, L"1thread");
-			Assert::AreEqual(hist_thready(2), true, L"2thready");
-			Assert::AreEqual(hist_thready(4), true, L"4thready");
-			Assert::AreEqual(hist_thready(8), true, L"8threadov");
-			Assert::AreEqual(hist_thready(12), true, L"8threadov");
-			Assert::AreEqual(hist_thready(16), true, L"16threadov");
+			Assert::AreEqual(hist_thready(2), true, L"hist_2thready");
+			Assert::AreEqual(hist_thready(4), true, L"hist_4thready");
+			Assert::AreEqual(hist_thready(8), true, L"hist_8threadov");
+			Assert::AreEqual(hist_thready(12), true, L"hist_8threadov");
+			Assert::AreEqual(hist_thready(16), true, L"hist_16threadov");
 		}
 	};
 
@@ -234,6 +233,116 @@ namespace UnitTest
 			}
 		}
 
+		bool poster_thready(int pt, int pf)
+		{
+			int d = 256;
+			int r, g, b;
+
+			std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+			std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
+
+			std::vector<int> red(d, 0);
+			std::vector<int> green(d, 0);
+			std::vector<int> blue(d, 0);
+			std::vector<int> jas(d, 0);
+
+			std::vector<int> novered(d, 0);
+			std::vector<int> novegreen(d, 0);
+			std::vector<int> noveblue(d, 0);
+			std::vector<int> novejas(d, 0);
+
+			uint32_t pBitmap[256][256];
+			uint32_t noveBitmap[256][256];
+			uint32_t kontrolBitmap[256][256];
+			memset(pBitmap, 0, sizeof(uint32_t)*d*d);
+			memset(noveBitmap, 2555, sizeof(uint32_t)*d*d);
+			memset(kontrolBitmap, 0, sizeof(uint32_t)*d*d);
+
+			for (int x = 0; x < d; x++) {
+				for (int y = 0; y < d; y++) {
+					pBitmap[x][y] = x * 256 * 256 + y * 256 + x;
+					r = (int)min(round(x / (double)pf)*pf, 255);
+					g = (int)min(round(y / (double)pf)*pf, 255);
+					b = (int)min(round(x / (double)pf)*pf, 255);
+					kontrolBitmap[x][y] = r * 256 * 256 + g * 256 + b;
+				}
+			}
+
+			int dlzka = d / pt;
+
+			multi_thread_poster(pt, pf, dlzka, pBitmap, noveBitmap, 0, d, 4 * d, 4 * d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+
+			for (int x = 0; x < d; x++)
+			{
+				for (int y = 0; y < d; y++)
+				{
+					if(noveBitmap[x][y] != kontrolBitmap[x][y]) return false;
+				}
+			}
+
+			for (int j = 0; j < pt; j++)
+			{
+				for (int i = 0; i <= 255; i++)
+				{
+					red[i] += HistRed1[j][i];
+					green[i] += HistGreen1[j][i];
+					blue[i] += HistBlue1[j][i];
+					jas[i] += HistBright1[j][i];
+				}
+			}
+
+			for (int j = 0; j < pt; j++)
+			{
+				for (int i = 0; i <= 255; i++)
+				{
+					HistRed1[j][i] = 0;
+					HistGreen1[j][i] = 0;
+					HistBlue1[j][i] = 0;
+					HistBright1[j][i] = 0;
+				}
+			}
+
+			multi_thread(pt, dlzka, kontrolBitmap, 0, d, 4 * d, d, std::ref(HistRed1), std::ref(HistGreen1), std::ref(HistBlue1), std::ref(HistBright1), [d]() {return false; });
+
+			for (int j = 0; j < pt; j++)
+			{
+				for (int i = 0; i <= 255; i++)
+				{
+					novered[i] += HistRed1[j][i];
+					novegreen[i] += HistGreen1[j][i];
+					noveblue[i] += HistBlue1[j][i];
+					novejas[i] += HistBright1[j][i];
+				}
+			}
+
+			for (int i = 0; i < d; i++)
+			{
+				if(red[i] != novered[i])return false;
+				if(green[i] != novegreen[i])return false;
+				if(blue[i] != noveblue[i])return false;
+				if(jas[i] != novejas[i])return false;
+			}
+			return true;
+		}
+
+		TEST_METHOD(TestPoster_tredy)
+		{
+			Assert::AreEqual(poster_thready(2,256), true, L"poster_2thready");
+			Assert::AreEqual(poster_thready(4,256), true, L"poster_4thready");
+			Assert::AreEqual(poster_thready(8,256), true, L"poster_8threadov");
+			Assert::AreEqual(poster_thready(12,256), true, L"poster_8threadov");
+			Assert::AreEqual(poster_thready(16,256), true, L"poster_16threadov");
+		}
+
+		TEST_METHOD(TestPoster_farby)
+		{
+			Assert::AreEqual(poster_thready(4, 128), true, L"poster_27farieb");
+			Assert::AreEqual(poster_thready(4, 64), true, L"poster_125farieb");
+			Assert::AreEqual(poster_thready(4, 32), true, L"poster_512farieb");
+			Assert::AreEqual(poster_thready(4, 16), true, L"poster_4913farieb");
+		}
 		
 	};
 }

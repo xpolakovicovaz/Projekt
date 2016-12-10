@@ -1,6 +1,3 @@
-//kedy mam vymazat bitmapy z single_tred(pBitmap) a singl_tred_poster(noveBitmap2 a pBitmap2)
-//odstranoit bitmapy z hora
-
 // ApplicationDlg.cpp : implementation file
 //
 #include "stdafx.h"
@@ -30,7 +27,7 @@
 
 namespace
 {
-	void LoadAndCalc(Gdiplus::Bitmap* &pvBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
+	void LoadAndCalc(Gdiplus::Bitmap* &pBitmap, std::vector<int> &red, std::vector<int> &green, std::vector<int> &blue, std::vector<int> &jas, int pt, std::thread::id m_thread_id, std::function<bool()> fn)
 	{
 		int r = 0;
 		int g = 0;
@@ -47,8 +44,8 @@ namespace
 		Gdiplus::Color *color;
 		color = new Gdiplus::Color(200, 255, 255, 255);
 		Gdiplus::BitmapData Bdata;
-		Gdiplus::Bitmap* pBitmap;
-		pBitmap = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(),  PixelFormat32bppRGB);
+	//	Gdiplus::Bitmap* pBitmap;
+	//	pBitmap = pvBitmap->Clone(0, 0, pvBitmap->GetWidth(), pvBitmap->GetHeight(),  PixelFormat32bppRGB);
 		int dlzka = pBitmap->GetHeight() / pt;
 
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
@@ -128,6 +125,7 @@ void CApplicationDlg::single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bi
 	if (std::this_thread::get_id() == m_thread_id) {
 		std::tuple <Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> ntuple(noveBitmap2, a_tred, HistRed, HistGreen, HistBlue, HistBright);
 		SendMessage(WM_SET_NOVEBITMAP, (WPARAM)&ntuple);
+		delete pBitmap2;
 	}
 	else
 	{
@@ -149,8 +147,6 @@ void CApplicationDlg::posterizuj()
 	m_pocita = true;
 	m_noveBitmap = m_pBitmap->Clone(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), PixelFormat32bppRGB);
 	single_tred_poster(m_pBitmap, m_noveBitmap);
-
-	m_pocita = false;
 }
 
 
@@ -418,8 +414,6 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_POSTERIZACIA_4913FARIEB, &CApplicationDlg::OnUpdatePosterizacia4913farieb)
 END_MESSAGE_MAP()
 
-
-
 void CApplicationDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
 	if (m_zc)
@@ -446,6 +440,12 @@ void CApplicationDlg::OnDestroy()
 	{
 		delete m_pBitmap;
 		m_pBitmap = nullptr;
+	}
+
+	if (m_noveBitmap != nullptr)
+	{
+		delete m_noveBitmap;
+		m_noveBitmap = nullptr;
 	}
 }
 
@@ -531,8 +531,6 @@ LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 
 LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 {
-	m_pocita = false;
-
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 
@@ -918,6 +916,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 {
+	m_pocita = false;
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
 
 	if (m_pBitmap != nullptr)
@@ -946,6 +945,7 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	if (!csFileName.IsEmpty())
 	{
 		m_pocita = true;
+		BeginWaitCursor();
 		std::thread tred(&CApplicationDlg::single_tred, this, csFileName);
 		m_thread_id = tred.get_id();
 
@@ -954,7 +954,6 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	*pResult = 0;
 	m_pf = 0;
-	//m_pocita = false;
 	m_zobrazene = false;
 	m_xy = -10;
 	m_zc = false;
@@ -1054,12 +1053,17 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 	}
-	//m_pocita = false;
+	m_pocita = false;
 	return TRUE;
 }
 
 LRESULT CApplicationDlg::OnSetNoveBitmap(WPARAM wParam, LPARAM lParam)
 {
+	if (m_noveBitmap != nullptr)
+	{
+		delete m_noveBitmap;
+		m_noveBitmap = nullptr;
+	}	
 	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::thread::id, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> *)(wParam);
 	if (std::get<1>(*ptuple) == m_thread_id) {
 		m_noveBitmap = std::get<0>(*ptuple);
@@ -1070,7 +1074,7 @@ LRESULT CApplicationDlg::OnSetNoveBitmap(WPARAM wParam, LPARAM lParam)
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 	}
-	//m_pocita = false;
+	m_pocita = false;
 	return TRUE;
 }
 
@@ -1235,7 +1239,6 @@ void CApplicationDlg::OnPostreization4096farieb()
 	m_zobrazene = true;
 	m_ctrlImage.Invalidate();
 	m_ctrlHistogram.Invalidate();
-	// TODO: Add your command handler code here
 }
 
 
