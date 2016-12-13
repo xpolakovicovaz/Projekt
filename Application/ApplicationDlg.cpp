@@ -1,3 +1,5 @@
+//spustit single_tred_poster v samostatnom trede 
+
 // ApplicationDlg.cpp : implementation file
 //
 #include "stdafx.h"
@@ -13,6 +15,9 @@
 #include <thread>
 #include <atomic>
 #include <functional>
+//#include <iostream>
+//#include <fstream>
+//#include <time.h>
 
 
 
@@ -78,7 +83,8 @@ namespace
 		Gdiplus::Rect rect(0, 0, pBitmap->GetWidth(), pBitmap->GetHeight());
 		Gdiplus::Rect noverect(0, 0, noveBitmap->GetWidth(), noveBitmap->GetHeight());
 		std::vector<std::vector<int>> HistRed1(pt, std::vector<int>(256));
-		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistBright1(pt, std::vector<int>(256));
+		std::vector<std::vector<int>> HistGreen1(pt, std::vector<int>(256));
 		std::vector<std::vector<int>> HistBlue1(pt, std::vector<int>(256));
 
 		noveBitmap->LockBits(&noverect, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, &noveBdata);
@@ -136,6 +142,7 @@ void CApplicationDlg::single_tred_poster(Gdiplus::Bitmap* &pvBitmap, Gdiplus::Bi
 
 void CApplicationDlg::posterizuj()
 {
+	//begin = clock();
 	if (m_noveBitmap != nullptr)
 	{
 		delete m_noveBitmap;
@@ -147,6 +154,8 @@ void CApplicationDlg::posterizuj()
 	m_pocita = true;
 	m_noveBitmap = m_pBitmap->Clone(0, 0, m_pBitmap->GetWidth(), m_pBitmap->GetHeight(), PixelFormat32bppRGB);
 	single_tred_poster(m_pBitmap, m_noveBitmap);
+	//std::thread tredposter(&CApplicationDlg::single_tred_poster,this, m_pBitmap, m_noveBitmap);
+	//m_thread_id = tredposter.get_id();
 }
 
 
@@ -577,16 +586,27 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 
 		if (m_zc)
 		{
+			Gdiplus::Bitmap * hBmp;//horna bitmapa
+			Gdiplus::Bitmap * dBmp;//dolna Bitmapa
+
+			hBmp = m_noveBitmap->Clone(0, 0, m_noveBitmap->GetWidth(), (int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() / (double)nHeight))), PixelFormat32bppRGB);
+			dBmp = m_pBitmap->Clone(0, int((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() / (double)nHeight)), m_pBitmap->GetWidth(), m_pBitmap->GetHeight() - (int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() / (double)nHeight))), PixelFormat32bppRGB);
+
 			int stred = rct.top + (rct.Height() - nHeight) / 2 + nHeight / 2;
 			if (m_xy > stred + (int)nHeight / 2) m_xy = stred + nHeight / 2;
 			if (m_xy < stred - (int)nHeight / 2) m_xy = stred - nHeight / 2;
 
 			Gdiplus::Pen bp(Gdiplus::Color(255, 0, 0, 0), 3);
 			Gdiplus::Pen wp(Gdiplus::Color(255, 255, 255, 255), 1);
-			gr.DrawImage(m_noveBitmap->Clone(0,0,m_noveBitmap->GetWidth(), (int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() / (double)nHeight))),PixelFormat32bppRGB), destRect.X,destRect.Y,destRect.Width, m_xy-destRect.Y);
-			gr.DrawImage(m_pBitmap->Clone(0,int((m_xy-destRect.Y)*(double)(m_pBitmap->GetHeight()/(double)nHeight)),m_pBitmap->GetWidth(),m_pBitmap->GetHeight()-(int)(((m_xy - destRect.Y)*(double)(m_pBitmap->GetHeight() /(double) nHeight))), PixelFormat32bppRGB), (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
+			
+			gr.DrawImage(hBmp, destRect.X, destRect.Y, destRect.Width, m_xy - destRect.Y);
+			gr.DrawImage(dBmp, (int)(rct.left + (rct.Width() - nWidth) / 2),m_xy, nWidth, stred+(nHeight/2)-m_xy);
+
 			gr.DrawLine(&bp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
 			gr.DrawLine(&wp, (int)(rct.left + (rct.Width() - nWidth) / 2), m_xy, (int)(rct.left + (rct.Width() - nWidth) / 2 + nWidth), m_xy);
+		
+			delete hBmp;
+			delete dBmp;
 		}
 		else
 		{
@@ -599,6 +619,11 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
+
+	//end = clock();
+	//double cas = double(end - begin) / CLOCKS_PER_SEC;
+	//if(!m_zobrazene)myfile <<"pt="<<m_pt<<"\tcas_hist = "<<cas<< "\n";
+	//if (m_zobrazene)myfile << "pt=" << m_pt << "\tcas_efekt+hist = " << cas << "\n";
 
 	return S_OK;
 }
@@ -659,6 +684,8 @@ void CApplicationDlg::OnSize(UINT nType, int cx, int cy)
 
 void CApplicationDlg::OnClose()
 {
+	//myfile << "Writing this to a file.\n";
+	//myfile.close();
 	EndDialog(0);
 }
 
@@ -720,6 +747,8 @@ BOOL CApplicationDlg::OnInitDialog()
 	m_pocita = false;
 	m_pt = 2;
 	m_noveBitmap = nullptr;
+
+	//myfile.open("example.txt");
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -916,6 +945,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 {
+	//begin = clock();
 	m_pocita = false;
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
 
@@ -945,7 +975,6 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 	if (!csFileName.IsEmpty())
 	{
 		m_pocita = true;
-		BeginWaitCursor();
 		std::thread tred(&CApplicationDlg::single_tred, this, csFileName);
 		m_thread_id = tred.get_id();
 

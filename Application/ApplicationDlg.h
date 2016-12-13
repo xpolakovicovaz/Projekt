@@ -10,6 +10,8 @@
 #include <thread>
 #include <functional>
 #include <atomic>
+#include <iostream>
+#include <fstream>
 
 class CStaticImage : public CStatic
 {
@@ -79,6 +81,9 @@ protected:
 	std::atomic<std::thread::id> m_thread_id;
 	int m_pt;//pocet threadov
 	int m_pf;//pocet farieb
+//	std::ofstream myfile;
+//	clock_t begin;
+//	clock_t end;
 
 public:
 	afx_msg void drawrect(std::vector<int> vektor, CDC &DC, Gdiplus::Color f, double scX, double scY);
